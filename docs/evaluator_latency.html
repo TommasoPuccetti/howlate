@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>evaluator_latency.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>evaluator_latency.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <p>This module evaluates an Intrusion Detection model by computing the time an attack remains undetected. The evaluation includes the following key metrics:</p>
+<ul>
+<li><strong>False Positive Rate (FPR):</strong> The proportion of normal instances misclassified as attacks.</li>
+<li><strong>Attack Latency (Δl):</strong> The time taken to detect each attack sequence.</li>
+<li><strong>Sequence Detection Rate (SDR):</strong> The number of detected attack sequences over the total attack sequences.</li>
+</ul>
+<h3>Evaluation Approach</h3>
+<p>To measure the average latency (ΔL) and SDR at different FPR levels, the evaluation keeps track of:</p>
+<ol>
+<li><strong>Initial Data Point of Each Attack Sequence:</strong> Marks the start of each attack.</li>
+<li><strong>Positions of Data Points Labeled as Anomalous:</strong> Tracks where the model detects anomalies.</li>
+<li><strong>First Correctly Classified Anomalous Data Point in Each Sequence:</strong> Determines when an attack is first detected.</li>
+</ol>
+<p>These metrics are only meaningful if the dataset consists of sequences containing normal and anomalous operations.</p>
+<h3>Main Evaluation Functions</h3>
+<h4>evaluate()</h4>
+<p>Evaluates the detector using latency/fpr tradeoff. It computes latency, for each of the attack sequences in the dataset at different FPR thresholds. Implements the abstract methods of the Evaluator class in <a href="evaluator.html">evaluator.py</a>. Main calls are <a href="evaluator_latency.html#avg_fpr_latency">avg_fpr_latency()</a> and <a href="evaluator_latency.html#summary_fpr_latency">summary_fpr_latency()</a>  functions.<br />
+(See implementation: <a href="evaluator_latency.html#evaluate">here</a>)</p>
+<h4>avg_results()</h4>
+<p>Computes the average latency results at various FPR thresholds for sequences, both overall and grouped by attack type. The output is a .xlsx file resuming collecting results for each attack sequence, and detected attack sequence, along with the average and overall results for latency and SDR.<br />
+(See implementation: <a href="evaluator_latency.html#avg_fpr_latency">here</a>).</p>
+<h4>summary_fpr_latency()</h4>
+<p>Create a table that reports the average results for latency and SDR at different FPR thresholds.
+(See implementation: <a href="evaluator_latency.html#summary_fpr_latency">here</a>)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sklearn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn</span><span class="w"> </span><span class="kn">import</span> <span class="n">metrics</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="kn">import</span> <span class="n">figure</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">config</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">loader</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathManager</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">results_handler</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">rh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">evaluator</span><span class="w"> </span><span class="kn">import</span> <span class="n">Evaluator</span>
+
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">class</span><span class="w"> </span><span class="nc">LatencyEvaluator</span><span class="p">(</span><span class="n">Evaluator</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_p</span><span class="p">:</span> <span class="n">PathManager</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avg_results</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tradeoff_summary</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">results_p</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      <h3><span id="evaluate" href="evaluate"> evaluate </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">test_multi</span><span class="p">,</span> <span class="n">test_timestamp</span><span class="p">,</span> <span class="n">test_seq</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">desired_fprs</span><span class="o">=</span><span class="n">DESIRED_FPRS</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        
+        <span class="n">results_p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_if_out_path_is_given</span><span class="p">(</span><span class="n">results_p</span><span class="p">)</span>
+
+        <span class="n">bin_preds_fpr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bin_preds_for_given_fpr</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">desired_fprs</span><span class="p">,</span> <span class="n">verbose</span><span class="p">)</span>
+
+        <span class="n">sequences_results_fprs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">bin_pred</span><span class="p">,</span> <span class="n">des_fpr</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bin_preds_fpr</span><span class="p">,</span> <span class="n">desired_fprs</span><span class="p">):</span>
+            <span class="n">sequences_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_all_attack_sequences</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span> <span class="n">test_multi</span><span class="p">,</span> <span class="n">test_timestamp</span><span class="p">,</span> <span class="n">test_seq</span><span class="p">,</span> <span class="n">bin_pred</span><span class="p">,</span> <span class="n">des_fpr</span><span class="p">,</span> <span class="n">results_p</span><span class="p">,</span> <span class="n">verbose</span><span class="p">)</span>
+            <span class="n">sequences_results_fprs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sequences_results</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">avg_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_fpr_latency</span><span class="p">(</span><span class="n">sequences_results_fprs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tradeoff_summary</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">summary_fpr_latency</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_results</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tradeoff_summary</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <h3><span id="atk_sequence_from_seq_idxs" href="atk_sequence_from_seq_idxs"> atk_sequence_from_seq_idxs </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">atk_sequence_from_seq_idxs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">bin_pred</span><span class="p">,</span> <span class="n">seq</span><span class="p">,</span> <span class="n">last</span><span class="p">):</span>
+        <span class="n">seq_y</span> <span class="o">=</span> <span class="n">test_y</span><span class="p">[</span><span class="n">seq</span><span class="p">]</span>
+        <span class="n">seq_preds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">bin_pred</span><span class="p">[</span><span class="n">last</span><span class="p">:</span> <span class="n">last</span> <span class="o">+</span> <span class="n">seq_y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+        <span class="n">y_test_atk</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">seq_y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_test_atk</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">last</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq_y</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">seq_y</span><span class="p">,</span> <span class="n">seq_preds</span><span class="p">,</span> <span class="n">y_test_atk</span><span class="p">,</span> <span class="n">last</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <h3><span id="eval_sequence_latency" href="eval_sequence_latency"> eval_sequence_latency </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">eval_sequence_latency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seq</span><span class="p">,</span> <span class="n">y_test_atk</span><span class="p">,</span> <span class="n">test_timestamp</span><span class="p">,</span> <span class="n">seq_preds</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <p>Compute attack timing</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">attack_start_idx</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="n">y_test_atk</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">attack_end_idx</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="n">y_test_atk</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="n">attack_time</span> <span class="o">=</span> <span class="n">test_timestamp</span><span class="p">[</span><span class="n">attack_end_idx</span><span class="p">]</span> <span class="o">-</span> <span class="n">test_timestamp</span><span class="p">[</span><span class="n">attack_start_idx</span><span class="p">]</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      <p>Detect first attack occurrence</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">if</span> <span class="mi">1</span> <span class="ow">in</span> <span class="n">seq_preds</span><span class="p">[</span><span class="n">y_test_atk</span><span class="p">]:</span>
+            <span class="n">index_rel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">seq_preds</span><span class="p">[</span><span class="n">y_test_atk</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">index_abs</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="n">y_test_atk</span><span class="p">[</span><span class="n">index_rel</span><span class="p">]]</span>
+            <span class="n">detection_time</span> <span class="o">=</span> <span class="n">test_timestamp</span><span class="p">[</span><span class="n">index_abs</span><span class="p">]</span> <span class="o">-</span> <span class="n">test_timestamp</span><span class="p">[</span><span class="n">attack_start_idx</span><span class="p">]</span>
+            <span class="n">detected</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">index_rel</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+            <span class="n">index_abs</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="n">y_test_atk</span><span class="p">[</span><span class="n">index_rel</span><span class="p">]]</span>
+            <span class="n">detection_time</span> <span class="o">=</span> <span class="n">attack_time</span>  <span class="c1"># If undetected, assign full attack time</span>
+            <span class="n">detected</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">latency_seq_res</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;atk_start_idx&quot;</span><span class="p">:</span> <span class="n">attack_start_idx</span><span class="p">,</span>
+            <span class="s2">&quot;atk_end_idx&quot;</span><span class="p">:</span> <span class="n">attack_end_idx</span><span class="p">,</span>
+            <span class="s2">&quot;atk_time&quot;</span><span class="p">:</span> <span class="n">attack_time</span><span class="p">,</span>
+            <span class="s2">&quot;det_idx_rel&quot;</span><span class="p">:</span> <span class="n">index_rel</span><span class="p">,</span>
+            <span class="s2">&quot;det_idx_abs&quot;</span><span class="p">:</span> <span class="n">index_abs</span><span class="p">,</span>
+            <span class="s2">&quot;det_time&quot;</span><span class="p">:</span> <span class="n">detection_time</span><span class="p">,</span>
+            <span class="s2">&quot;det&quot;</span><span class="p">:</span> <span class="n">detected</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">latency_seq_res</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-8'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-8'>#</a>
+      </div>
+      <h3><span id="eval_all_attack_sequences" href="eval_all_attack_sequences"> eval_all_attack_sequences </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">eval_all_attack_sequences</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">test_multi</span><span class="p">,</span> <span class="n">test_timestamp</span><span class="p">,</span> <span class="n">test_seq</span><span class="p">,</span> <span class="n">bin_pred</span><span class="p">,</span> <span class="n">desired_fpr</span><span class="p">,</span> <span class="n">results_p</span><span class="p">,</span> <span class="n">verbose</span><span class="p">):</span>
+        <span class="n">sequences_results</span> <span class="o">=</span> <span class="n">rh</span><span class="o">.</span><span class="n">init_sequence_results_dict</span><span class="p">()</span>
+        <span class="n">last</span> <span class="o">=</span> <span class="mi">0</span>  
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">test_seq</span><span class="p">):</span>
+            <span class="n">seq_y</span><span class="p">,</span> <span class="n">seq_preds</span><span class="p">,</span> <span class="n">y_test_atk</span><span class="p">,</span> <span class="n">last</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">atk_sequence_from_seq_idxs</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span> <span class="n">bin_pred</span><span class="p">,</span> <span class="n">seq</span><span class="p">,</span> <span class="n">last</span><span class="p">)</span>
+            <span class="n">seq_sota_eval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_sota</span><span class="p">(</span><span class="n">seq_y</span><span class="p">,</span> <span class="n">seq_preds</span><span class="p">)</span>
+            <span class="n">latency_seq_res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_sequence_latency</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">y_test_atk</span><span class="p">,</span> <span class="n">test_timestamp</span><span class="p">,</span> <span class="n">seq_preds</span><span class="p">)</span>
+            <span class="n">sequences_results</span> <span class="o">=</span> <span class="n">rh</span><span class="o">.</span><span class="n">store_sequence_results</span><span class="p">(</span><span class="n">sequences_results</span><span class="p">,</span> <span class="n">latency_seq_res</span><span class="p">,</span> <span class="n">seq_sota_eval</span><span class="p">,</span> <span class="n">y_test_atk</span><span class="p">,</span> <span class="n">test_multi</span><span class="p">,</span> <span class="n">desired_fpr</span><span class="p">)</span>
+            <span class="n">last</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq_y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+            <span class="n">sequences_results</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span>  <span class="nb">str</span><span class="p">(</span><span class="n">desired_fpr</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.csv&#39;</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">sequences_results</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-9'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-9'>#</a>
+      </div>
+      <h3><span id="avg_fpr_latency" href="avg_fpr_latency"> avg_fpr_latency </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">avg_fpr_latency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sequences_results</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-10'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-10'>#</a>
+      </div>
+      <p>if the path is not provided by argument take the one in object param.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">results_p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_if_out_path_is_given</span><span class="p">(</span><span class="n">results_p</span><span class="p">)</span>
+            
+        <span class="k">for</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">sequences_results</span><span class="p">:</span> 
+            <span class="n">num_seq</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-11'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-11'>#</a>
+      </div>
+      <p>calculate time_to_detect (attack latency) for all the detected sequences </p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">df_detect</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;detected&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">df_detect</span><span class="p">[</span><span class="s1">&#39;time_to_detect&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_timedelta</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;time_to_detect&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-12'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-12'>#</a>
+      </div>
+      <p>calculate sequence detection rate</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">grouped_df</span> <span class="o">=</span> <span class="n">df_detect</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;attack_type&#39;</span><span class="p">)</span>
+            <span class="n">grouped_df_det</span> <span class="o">=</span> <span class="n">df_detect</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;attack_type&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;count_det&#39;</span><span class="p">)</span>
+            <span class="n">grouped_df_tot</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;attack_type&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;count_tot&#39;</span><span class="p">)</span>
+
+            <span class="n">detection_rate_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">grouped_df_det</span><span class="p">,</span> <span class="n">grouped_df_tot</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">&#39;attack_type&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;outer&#39;</span><span class="p">)</span>
+            <span class="n">detection_rate_df</span><span class="p">[</span><span class="s1">&#39;count_ratio&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">detection_rate_df</span><span class="p">[</span><span class="s1">&#39;count_det&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">detection_rate_df</span><span class="p">[</span><span class="s1">&#39;count_tot&#39;</span><span class="p">]</span>
+            <span class="n">target_fpr</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;target_fpr&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">detection_rate_df</span><span class="p">[</span><span class="s1">&#39;target_fpr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">target_fpr</span>
+
+            <span class="n">avg_result_df</span> <span class="o">=</span> <span class="n">rh</span><span class="o">.</span><span class="n">store_results_for_attack_type</span><span class="p">(</span><span class="n">grouped_df</span><span class="p">)</span>
+            <span class="n">all_results_df</span> <span class="o">=</span> <span class="n">rh</span><span class="o">.</span><span class="n">store_overall_results</span><span class="p">(</span><span class="n">num_seq</span><span class="p">,</span> <span class="n">target_fpr</span><span class="p">,</span> <span class="n">df_detect</span><span class="p">)</span>
+            <span class="n">rh</span><span class="o">.</span><span class="n">all_latency_results_to_excel</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="n">target_fpr</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">df_detect</span><span class="p">,</span> <span class="n">avg_result_df</span><span class="p">,</span> <span class="n">detection_rate_df</span><span class="p">,</span> <span class="n">all_results_df</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-13'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-13'>#</a>
+      </div>
+      <h3><span id="summary_fpr_latency" href="summary_fpr_latency"> summary_fpr_latency </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">summary_fpr_latency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">results_p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_if_out_path_is_given</span><span class="p">(</span><span class="n">results_p</span><span class="p">)</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">results_p</span><span class="p">)</span>
+        <span class="n">xlsx_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">file</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.xlsx&#39;</span><span class="p">)]</span>
+    
+        <span class="n">df_out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="n">rows_fpr</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">rows_sdr</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">xlsx_files</span><span class="p">:</span>
+            <span class="n">df_fpr</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_excel</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span> <span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;avg_results_for_attack_type&#39;</span><span class="p">)</span>
+            <span class="n">df_sdr</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_excel</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span> <span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;detection_rate_for_attack_type&#39;</span><span class="p">)</span>
+            <span class="n">target_fpr</span> <span class="o">=</span> <span class="n">df_sdr</span><span class="p">[</span><span class="s1">&#39;target_fpr&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            
+            <span class="n">df_fpr_out</span> <span class="o">=</span> <span class="n">df_fpr</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;attack_type_&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">selected_row</span> <span class="o">=</span> <span class="n">df_fpr_out</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;time_to_detect_mean&#39;</span><span class="p">]</span>
+            <span class="n">selected_row</span> <span class="o">=</span> <span class="n">selected_row</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">selected_row</span><span class="p">[</span><span class="s1">&#39;target_fpr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">target_fpr</span><span class="p">]</span>
+            <span class="n">rows_fpr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">selected_row</span><span class="p">)</span>
+
+            <span class="n">df_sdr_out</span> <span class="o">=</span> <span class="n">df_sdr</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s1">&#39;attack_type&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">selected_row</span> <span class="o">=</span> <span class="n">df_sdr_out</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;count_ratio&#39;</span><span class="p">]</span>
+            <span class="n">selected_row</span> <span class="o">=</span> <span class="n">selected_row</span><span class="o">.</span><span class="n">to_frame</span><span class="p">()</span><span class="o">.</span><span class="n">T</span>
+            <span class="n">selected_row</span><span class="p">[</span><span class="s1">&#39;target_fpr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">target_fpr</span><span class="p">]</span>
+            <span class="n">rows_sdr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">selected_row</span><span class="p">)</span>
+
+        <span class="n">df_fpr_out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">rows_fpr</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">df_sdr_out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">rows_sdr</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="n">rh</span><span class="o">.</span><span class="n">summary_fpr_latency_sdr_to_excel</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="n">df_fpr_out</span><span class="p">,</span> <span class="n">df_sdr_out</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">df_fpr_out</span><span class="p">,</span> <span class="n">df_sdr_out</span><span class="p">)</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>
