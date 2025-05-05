@@ -1,3 +1,8 @@
+"""
+This module define the PathManager class that handles the input and output path fof operating the files needed by the framework. Additionally define the DataLoader class that uses the paths of a defined PathManager to load and output the files to perform detector evaluation and dataset creation 
+
+"""
+
 import numpy as np
 import pandas as pd 
 import os
@@ -8,21 +13,23 @@ import results_handler as rh
 #TODO a function that takes your data_frame and produces dataset files needed for the evaluation method.
 
 class PathManager:
-    """Initialize the paths to files needed for evaluation.
+    """
+    Initialize the paths to files needed for evaluation.
+     
      Attributes:
-         root: data root folder.
-         dataset: name of the dataset.
-         models: name of the model.
-         dataset_root: points to dataset folder e.g. (./data/dos_mqtt_iot).
-         files: points to the "dataset" folder of dataset_root (contains the dataset and label folder)
-         models: points to the folder where folders dedicated to models are stored.
-         target_model: points to a specific dataset folder (contains model and prediction folder)
-         test_y_p: points to test binary label.
-         test_multi_p: points to test multi-class label.
-         timestamp_test_p: points to test timestamp.
-         test_seq_p: points to test sequences indices.
-         preds_proba_p: points to model prediction probabilities.
-         preds_p: points to model binary predictions.
+         - **root:** data root folder.
+         - **dataset:** name of the dataset.
+         - **models:** name of the model.
+         - **dataset_root:** points to dataset folder e.g. (./data/dos_mqtt_iot).
+         - **files:** points to the "dataset" folder of dataset_root (contains the dataset and label folder)
+         - **models:** points to the folder where folders dedicated to models are stored.
+         - **target_model:** points to a specific dataset folder (contains model and prediction folder)
+         - **test_y_p:** points to test binary label.
+         - **test_multi_p:** points to test multi-class label.
+         - **timestamp_test_p:** points to test timestamp.
+         - **test_seq_p:** points to test sequences indices.
+         - **preds_proba_p:** points to model prediction probabilities.
+         - **preds_p:** points to model binary predictions.
     """
     def __init__(self, dataset, model, root=ROOT, verbose=False):
         self.root = root
@@ -141,15 +148,18 @@ class PathManager:
 
 
 class DataLoader:
-    """Load files needed for evaluation.
-     Attributes: 
-         path_manager: an instance of the PathManager class that points to data to load.
-         test_y: .npy binary label.
-         test_multi: .npy multi-class label.
-         timestamp_test: .npy test timestamp.
-         test_seq: .npy test sequences indices.
-         preds_proba: .npy prediction probabilities of the model.
-         preds: .npy binary predictions of the model.
+    """
+    Load files needed for evaluation.
+    
+     Attributes:
+     
+         - **path_manager:** an instance of the PathManager class that points to data to load.
+         - **test_y:** .npy binary label.
+         - **test_multi:** .npy multi-class label.
+         - **timestamp_test:** .npy test timestamp.
+         - **test_seq:** .npy test sequences indices.
+         - **preds_proba:** .npy prediction probabilities of the model.
+         - **preds:** .npy binary predictions of the model.
     """
     def __init__(self, paths: PathManager):
         self.paths = paths

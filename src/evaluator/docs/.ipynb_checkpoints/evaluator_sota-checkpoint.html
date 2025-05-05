@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>evaluator_sota.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>evaluator_sota.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <p>This module evaluates an Intrusion Detection model by computing  standard classification metrics and the time an attack remains undetected. The evaluation includes the following key metrics:</p>
+<ul>
+<li><strong>False Positive Rate (FPR):</strong> The proportion of normal instances misclassified as attacks.</li>
+<li><strong>Attack Latency (Δl):</strong> The time taken to detect each attack sequence.</li>
+<li><strong>Sequence Detection Rate (SDR):</strong> The number of detected attack sequences over the total attack sequences.</li>
+</ul>
+<h3>Evaluation Approach</h3>
+<p>To measure the average latency (ΔL) and SDR at different FPR levels, the evaluation keeps track of:</p>
+<ol>
+<li><strong>Initial Data Point of Each Attack Sequence:</strong> Marks the start of each attack.</li>
+<li><strong>Positions of Data Points Labeled as Anomalous:</strong> Tracks where the model detects anomalies.</li>
+<li><strong>First Correctly Classified Anomalous Data Point in Each Sequence:</strong> Determines when an attack is first detected.</li>
+</ol>
+<p>These metrics are only meaningful if the dataset consists of sequences containing normal and anomalous operations.</p>
+<h3>Main Evaluation Functions</h3>
+<h4>eval_sota()</h4>
+<p>Evaluates the detector using standard classification metrics, including confusion matrices.
+(See implementation:  <a href="evaluator.html#eval_sota">evaluator.py</a>)</p>
+<h4>plot_curves()</h4>
+<p>Plots precision-recall and ROC curves to visualize model performance.
+(See implementation:  <a href="evaluator.html#plot_curves">evaluator.py</a>)</p>
+<h4>eval_fpr_latency()</h4>
+<p>Computes attack latency for each attack sequence at different FPR thresholds.
+(See implementation:  <a href="evaluator.html#eval_fpr_latency">evaluator.py</a>)</p>
+<h4>avg_fpr_latency()</h4>
+<p>Calculates the average attack latency per attack type and overall.
+(See implementation:  <a href="evaluator.html#avg_fpr_latency">evaluator.py</a>)</p>
+<h4>summary_fpr_latency()</h4>
+<p>Summarizes the average attack latency for different attack types and overall performance.
+(See implementation:  <a href="evaluator.html#summary_fpr_latency">evaluator.py</a>)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sklearn</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn</span><span class="w"> </span><span class="kn">import</span> <span class="n">metrics</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="kn">import</span> <span class="n">figure</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">config</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">loader</span><span class="w"> </span><span class="kn">import</span> <span class="n">PathManager</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">results_handler</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">rh</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">evaluator</span><span class="w"> </span><span class="kn">import</span> <span class="n">Evaluator</span>
+
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s1">&#39;ignore&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">class</span><span class="w"> </span><span class="nc">SotaEvaluator</span><span class="p">(</span><span class="n">Evaluator</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pm</span><span class="p">:</span> <span class="n">PathManager</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sota_results_fprs</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">pm</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">test_multi</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">desired_fprs</span><span class="o">=</span><span class="n">DESIRED_FPRS</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        
+        <span class="n">results_p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_if_out_path_is_given</span><span class="p">(</span><span class="n">results_p</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot_curves</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="n">results_p</span><span class="p">)</span>
+        
+        <span class="n">attacks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">test_multi</span><span class="p">)</span>
+        <span class="n">atk_index_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">test_multi</span> <span class="o">==</span> <span class="n">value</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">attacks</span><span class="p">]</span>
+        
+        <span class="n">bin_preds_fpr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bin_preds_for_given_fpr</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">desired_fprs</span><span class="p">,</span> <span class="n">verbose</span><span class="p">)</span>
+
+        <span class="n">sota_results_fprs</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">for</span> <span class="n">bin_pred</span><span class="p">,</span> <span class="n">desired_fpr</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bin_preds_fpr</span><span class="p">,</span> <span class="n">desired_fprs</span><span class="p">):</span>
+            <span class="n">sota_results_fpr</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">indexes</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">atk_index_list</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">atk_index_list</span><span class="p">))):</span>
+
+                <span class="n">sota_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_sota</span><span class="p">(</span><span class="n">test_y</span><span class="p">[</span><span class="n">indexes</span><span class="p">],</span> <span class="n">bin_pred</span><span class="p">[</span><span class="n">indexes</span><span class="p">])</span>
+                <span class="n">sota_results</span><span class="p">[</span><span class="s1">&#39;attack&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">attacks</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">sota_results_fpr</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sota_results</span><span class="p">)</span>
+            
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">sota_results_fpr</span><span class="p">)</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">desired_fpr</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.csv&#39;</span><span class="p">))</span>
+            <span class="n">sota_results_fprs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">sota_results_fprs</span> <span class="o">=</span> <span class="n">sota_results_fprs</span>
+
+        <span class="k">return</span> <span class="n">sota_results_fprs</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_bin_preds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">preds</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_sota</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span> <span class="n">preds</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">plot_curves</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">results_p</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">results_p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_p</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_precision_recall</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="n">results_p</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_roc</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="n">results_p</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">plot_roc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">results_p</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">results_p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_p</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+            <span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">roc_curve</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span>  <span class="n">preds_proba</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Recall&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;False Positive Rate&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="s2">&quot;roc_curve.pdf&quot;</span><span class="p">),</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;pdf&#39;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span><span class="w"> </span><span class="nf">plot_precision_recall</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">preds_proba</span><span class="p">,</span> <span class="n">results_p</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">results_p</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">results_p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">results_p</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+            <span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">precision_recall_curve</span><span class="p">(</span><span class="n">test_y</span><span class="p">,</span>  <span class="n">preds_proba</span><span class="p">[:,</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Precision&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Recall&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">yticks</span><span class="p">(</span><span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="s2">&quot;precision_recall_curve.pdf&quot;</span><span class="p">),</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;pdf&#39;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

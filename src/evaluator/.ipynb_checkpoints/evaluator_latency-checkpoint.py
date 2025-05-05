@@ -54,6 +54,28 @@ class LatencyEvaluator(Evaluator):
         super().__init__(results_p)
     
     # === evaluate ===
+        
+    """
+    This method evaluates a binary classifier's predictions at multiple desired false positive rates (FPRs).
+    It converts probability predictions into binary decisions per FPR threshold, then evaluates detection 
+    performance on attack sequences using metrics like detection latency and coverage.
+    
+    Parameters:
+    
+    - **test_y:** Ground truth binary labels (e.g. 0 for normal, 1 for attack).
+    - **test_multi:** Multi-label array with attack type or sequence identifiers.
+    - **test_timestamp:** Timestamps corresponding to each test sample.
+    - **test_seq**: Sequence or session IDs for grouping samples.
+    - **preds_proba:** Predicted probabilities from the classifier.
+    - **desired_fprs:** List of FPR thresholds for evaluation (defaults to DESIRED_FPRS).
+    - **results_p:** Optional path to store evaluation results.
+    - **verbose:** If True, prints intermediate logs for debugging or traceability. 
+    
+    Returns:
+    
+    - **avg_results:** Averaged metrics over sequences for each FPR.
+    - **tradeoff_summary:** Summary describing the detection-FPR tradeoff.
+    """
     def evaluate(self, test_y, test_multi, test_timestamp, test_seq, preds_proba, desired_fprs=DESIRED_FPRS, results_p=None, verbose=False):
         
         results_p = self.check_if_out_path_is_given(results_p)
@@ -71,6 +93,26 @@ class LatencyEvaluator(Evaluator):
         return self.avg_results, self.tradeoff_summary
         
     # === atk_sequence_from_seq_idxs ===
+
+    """
+    Extracts a single attack sequence from the dataset using sequence indices.
+    It slices the ground truth labels and predicted binary labels corresponding to the current sequence,
+    and identifies the packets indices within the sequence where an attack actually occurs.
+
+    Parameters:
+    
+    - **test_y:** Array of ground truth binary labels.
+    - **bin_pred:** Array of predicted binary labels (0 or 1).
+    - **seq:** Indices list corresponding to the current sequence.
+    - **last:** Index offset into `bin_pred` to start slicing predictions for this sequence.
+    
+    Returns:
+    
+    - **seq_y:** Ground truth labels for the current sequence.
+    - **seq_preds:** Predicted labels for the current sequence.
+    - **y_test_atk:** Indices within the sequence where attacks (label==1) occur.
+    - **last:** Updated offset for the next sequence.
+    """
     def atk_sequence_from_seq_idxs(self, test_y, bin_pred, seq, last):
         seq_y = test_y[seq]
         seq_preds = np.array(bin_pred[last: last + seq_y.shape[0]])
@@ -81,13 +123,35 @@ class LatencyEvaluator(Evaluator):
         return seq_y, seq_preds, y_test_atk, last
 
     # === eval_sequence_latency ===
+
+    """
+    Evaluates the latency of attack detection within a given sequence.
+    It measures the time from the start of an attack to the first positive prediction.
+    If no detection occurs during the attack window, it assumes the detection occurred at the end of the attack.
+    
+    Parameters:
+    
+    - **seq:** List of indices representing the current sequence (e.g., a session or time window).
+    - **y_test_atk:** Indices (relative to `seq`) where attacks actually occur.
+    - **test_timestamp:** Array of timestamps for each sample in the test set.
+    - **seq_preds:** Binary predictions for the current sequence.
+    
+    Returns:
+    
+    - **latency_seq_res:** Dictionary containing:
+        - **'atk_start_idx':** Absolute index of the first attack sample.
+        - **'atk_end_idx':** Absolute index of the last attack sample.
+        - **'atk_time':** Duration of the attack.
+        - **'det_idx_rel':** Index (relative to sequence) of first detection.
+        - **'det_idx_abs':** Absolute index of first detection.
+        - **'det_time':** Time taken to detect the attack.
+        - **'det':** Binary indicator (1 if detected, 0 otherwise).
+    """
     def eval_sequence_latency(self, seq, y_test_atk, test_timestamp, seq_preds):
-        # Compute attack timing
         attack_start_idx = seq[y_test_atk[0]]
         attack_end_idx = seq[y_test_atk[-1]]
         attack_time = test_timestamp[attack_end_idx] - test_timestamp[attack_start_idx]
         
-        # Detect first attack occurrence
         if 1 in seq_preds[y_test_atk]:
             index_rel = np.where(seq_preds[y_test_atk] == 1)[0][0]
             index_abs = seq[y_test_atk[index_rel]]
@@ -112,6 +176,27 @@ class LatencyEvaluator(Evaluator):
         return latency_seq_res
 
     # === eval_all_attack_sequences ===
+
+    """
+    Evaluates all attack sequences in the test set for a given false positive rate (FPR).
+    For each sequence, it extracts labels and predictions, computes sequence-level metrics
+    (including SOTA-based detection and attack latency), and stores the results.
+    
+    Parameters:
+    
+    - **test_y:** Ground truth binary labels for the entire test set.
+    - **test_multi:** Multi-label array with attack types or identifiers per sample.
+    - **test_timestamp:** Array of timestamps corresponding to test samples.
+    - **test_seq:** List of sequences, where each sequence is a list of indices.
+    - **bin_pred:** Binary predictions (0/1) over the full test set.
+    - **desired_fpr:** The false positive rate currently being evaluated.
+    - **results_p:** Path where verbose evaluation results may be stored.
+    - **verbose:** If True, saves per-sequence evaluation to CSV.
+    
+    Returns:
+    
+    - **sequences_results:** DataFrame or dictionary of evaluation metrics per seq
+    """
     def eval_all_attack_sequences(self, test_y, test_multi, test_timestamp, test_seq, bin_pred, desired_fpr, results_p, verbose):
         sequences_results = rh.init_sequence_results_dict()
         last = 0  
@@ -126,16 +211,31 @@ class LatencyEvaluator(Evaluator):
         return sequences_results
 
     # === avg_fpr_latency ===
+
+    """
+    Computes average detection latency and success rate metrics across all evaluated sequences,
+    grouped by attack type and false positive rate (FPR).
+    
+    This method processes the evaluation results produced per FPR, calculates time-to-detect in seconds,
+    derives detection ratios (i.e., how often attacks are detected), and stores both per-attack-type
+    and overall statistics.
+    
+    Parameters:
+    
+    - **sequences_results:** A list of DataFrames, each containing per-sequence evaluation metrics for one FPR.
+    - **results_p:** Optional path where detailed evaluation results (per FPR) will be saved.
+    
+    Effects:
+    
+    - Saves multiple Excel/CSV files with latency summaries, per-attack detection metrics, and global statistics.
+    """
     def avg_fpr_latency(self, sequences_results, results_p=None):
-        #if the path is not provided by argument take the one in object param.
         results_p = self.check_if_out_path_is_given(results_p)
             
         for df in sequences_results: 
-            num_seq = df.shape[0]
-            # calculate time_to_detect (attack latency) for all the detected sequences 
+            num_seq = df.shape[0] 
             df['time_to_detect'] = pd.to_timedelta(df['time_to_detect']).dt.total_seconds()
             df_detect = df[df['detected'] != 0]
-            #calculate sequence detection rate
             grouped_df = df.groupby('attack_type')
             grouped_df_det = df_detect.groupby('attack_type').size().reset_index(name='count_det')
             grouped_df_tot = df.groupby('attack_type').size().reset_index(name='count_tot') 
@@ -149,6 +249,25 @@ class LatencyEvaluator(Evaluator):
             rh.all_latency_results_to_excel(results_p, target_fpr, df, avg_result_df, detection_rate_df, all_results_df)
 
     # === summary_fpr_latency ===
+
+    """
+    Aggregates and summarizes detection latency and success metrics across all evaluated false positive rates (FPRs).
+    It reads previously stored Excel result files, extracts relevant statistics per attack type and overall,
+    and compiles them into summary tables.
+    
+    Parameters:
+    
+    - results_p: Optional path where result Excel files are stored. If not provided, a default is used.
+    
+    Returns:
+    
+    - df_fpr_out: DataFrame summarizing average time-to-detect per attack type and FPR.
+    - df_sdr_out: DataFrame summarizing detection ratios (count of detected sequences over total) per attack type and FPR.
+    
+    Effects:
+    
+    - Saves summarized metrics to disk via a utility function (`summary_fpr_latency_sdr_to_excel`).
+    """
     def summary_fpr_latency(self, results_p=None):
         results_p = self.check_if_out_path_is_given(results_p)
         files = os.listdir(results_p)
@@ -187,6 +306,3 @@ class LatencyEvaluator(Evaluator):
         rh.summary_fpr_latency_sdr_to_excel(results_p, df_fpr_out, df_sdr_out, df_sdr_out_all)
 
         return (df_fpr_out, df_sdr_out)
-
-
-

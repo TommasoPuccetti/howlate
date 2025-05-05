@@ -59,7 +59,34 @@ class SotaEvaluator(Evaluator):
     def __init__(self, pm: PathManager):
         self.sota_results_fprs = None
         super().__init__(pm)
-     
+
+    # === evaluate ===
+    
+    """
+    Evaluates classifier performance using SOTA (state-of-the-art) metrics for each attack type,
+    across a list of specified false positive rates (FPRs).
+    
+    This variant does not compute sequence-level latency metrics, but rather focuses on standard binary
+    classification metrics (e.g., precision, recall, F1-score) per attack category.
+    
+    Parameters:
+    
+    - **test_y:** Ground truth binary labels for the test set.
+    - **test_multi:** Array indicating attack category (or multi-label class) for each test sample.
+    - **preds_proba:** Predicted probabilities from the classifier.
+    - **desired_fprs:** List of FPR thresholds at which to evaluate performance (default: DESIRED_FPRS).
+    - **results_p:** Optional path to save per-FPR evaluation results as CSV files.
+    - **verbose:** If True, enables detailed logging.
+    
+    Returns:
+    
+    - **sota_results_fprs:** List of DataFrames containing per-attack evaluation metrics, one per FPR.
+    
+    Effects:
+    
+    - Saves evaluation metrics to CSV files named after the FPRs in the given output directory.
+    - Generates and saves performance curves using `plot_curves()`.
+    """
     def evaluate(self, test_y, test_multi, preds_proba, desired_fprs=DESIRED_FPRS, results_p=None, verbose=False):
         
         results_p = self.check_if_out_path_is_given(results_p)
@@ -90,15 +117,48 @@ class SotaEvaluator(Evaluator):
 
         return sota_results_fprs
 
+    # TODO: This maybe is not necessary
     def evaluate_bin_preds(self, test_y, preds):
         return self.eval_sota(test_y, preds)
 
+    # === plot_curves ===
+    
+    """
+    Plots and saves performance evaluation curves (precision-recall and ROC) for the classifier.
+    
+    Parameters:
+    
+    - **test_y:** Ground truth binary labels for the test set.
+    - **preds_proba:** Predicted probabilities from the classifier.
+    - **results_p:** Optional path to save the plots. If not provided, uses the default instance path.
+    
+    Effects:
+    
+    - Calls `plot_precision_recall()` and `plot_roc()` to generate and save respective figures.
+    """
     def plot_curves(self, test_y, preds_proba, results_p=None):
             if results_p == None:
                 results_p = self.results_p
             self.plot_precision_recall(test_y, preds_proba, results_p=results_p)
             self.plot_roc(test_y, preds_proba, results_p=results_p) 
 
+    # === plot_roc ===
+    
+    """
+    Plots and saves the Receiver Operating Characteristic (ROC) curve for classifier performance.
+    
+    Parameters:
+    
+    - **test_y:** Ground truth binary labels for the test set.
+    - **preds_proba:** Predicted class probabilities (2D array where [:,1] is the positive class).
+    - **results_p:** Optional path to save the ROC plot. Defaults to the instance's result path.
+    
+    Effects:
+    
+    - Computes false positive rate (FPR) and true positive rate (TPR) using sklearn's `roc_curve`.
+    - Plots and saves the ROC curve as a high-resolution PDF.
+    - Displays the plot interactively using `plt.show()`.
+    """
     def plot_roc(self, test_y, preds_proba, results_p=None):
             if results_p == None:
                 results_p = self.results_p
@@ -112,6 +172,23 @@ class SotaEvaluator(Evaluator):
             plt.savefig(os.path.join(results_p, "roc_curve.pdf"), format='pdf', bbox_inches='tight')
             plt.show()
 
+    # === plot_precision_recall ===
+    
+    """
+    Plots and saves the Precision-Recall curve to evaluate classifier performance under class imbalance.
+    
+    Parameters:
+    
+    - test_y: Ground truth binary labels for the test set.
+    - preds_proba: Predicted class probabilities (2D array where [:,1] is the positive class).
+    - results_p: Optional path to save the plot. Defaults to the instance's result path.
+    
+    Effects:
+    
+    - Computes precision and recall using sklearn's `precision_recall_curve`.
+    - Plots and saves the precision-recall curve as a high-resolution PDF.
+    - Displays the plot interactively with `plt.show()`.
+    """
     def plot_precision_recall(self, test_y, preds_proba, results_p=None):
             if results_p == None:
                 results_p = self.results_p
@@ -124,9 +201,4 @@ class SotaEvaluator(Evaluator):
             plt.yticks(fontsize=16)
             plt.savefig(os.path.join(results_p, "precision_recall_curve.pdf"), format='pdf', bbox_inches='tight')
             plt.show()
-
-       
-
-
-
-
+        

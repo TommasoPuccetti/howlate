@@ -1,3 +1,7 @@
+"""
+This module define Plotter class that plots FPR / Latency tradeoff.
+"""
+
 import numpy as np
 from sklearn import metrics
 import matplotlib.pyplot as plt
@@ -13,6 +17,27 @@ class Plotter():
         self.title = title
         self.df_results_p = os.path.join(self.results_p, 'final_results.xlsx')
 
+    # === check_if_path_is_given ===
+
+    """
+    Utility method to determine the base output path and update internal results file path.
+    
+    Parameters:
+    
+    - path: Optional path provided externally.
+    
+    Returns:
+    
+    - The provided path if given; otherwise, returns the default object path (`self.results_p`).
+    
+    Side effects:
+    
+    - If an explicit path is given, sets `self.df_results_p` to point to the expected Excel file at `[path]/final/final_results.xlsx`.
+    
+    Notes:
+    
+    - Used primarily to ensure consistent access to the summary Excel file for plotting or evaluation.
+    """
     def check_if_path_is_given(self, path):
         #if the path is not provided by argument take the one in object param.
         if path == None:
@@ -22,6 +47,32 @@ class Plotter():
         
         return path
 
+    # === plot ===
+
+    """
+    Plots the tradeoff between attack detection latency and false positive rate (FPR),
+    annotated with the sequence detection rate (SDR) at each FPR level.
+    
+    Parameters:
+    
+    - results_p: Optional path to save the plot. If None, defaults to the internal path.
+    
+    Behavior:
+    
+    - Loads two Excel sheets:
+        - 'fpr_latency_tradeoff': Contains latency values per FPR.
+        - 'fpr_sdr_overall': Contains SDR statistics per FPR.
+    - Sorts both dataframes by FPR and prepares a plot showing each latency metric.
+    - Annotates the plot with the SDR (percent of detected sequences) below each FPR tick.
+    
+    Returns:
+    
+    - None. Saves the plot as `final_results.pdf` and displays it.
+    
+    Notes:
+    
+    - Designed to visually assess how changes in FPR affect detection latency and overall performance.
+    """
     def plot(self, results_p=None):
 
         results_p = self.check_if_path_is_given(results_p)

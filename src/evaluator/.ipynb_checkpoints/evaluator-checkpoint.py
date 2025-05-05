@@ -1,3 +1,20 @@
+"""
+This module define the abstract class Evaluator with its fundamental functions. The Abstract class is implemented by EvaluatorSota [[evaluator_sota.py]] and  EvaluatorLatency [[evaluator_sota.py]].
+
+### Main Evaluation Functions
+
+#### evaluate()
+Evaluates the detector.
+(See implementation: [[evaluator_sota.py#evaluate]], [[evaluator_latency.py#evaluate]])
+
+#### eval_sota()
+Evaluate detector based on state-of-the art metrics for classification
+
+#### bin_preds_for_given_fpr()
+Transform the prediciton probabilities output of the detector in binary predictions per FPR threshold
+
+"""
+
 from abc import ABC, abstractmethod
 from loader import PathManager
 import sklearn
@@ -16,6 +33,23 @@ class Evaluator(ABC):
         """Method to be implemented by subclasses"""
         pass
 
+    # === check_if_out_path_is_given ===
+    
+    """
+    Utility method to determine the output path for saving results.
+    
+    Parameters:
+    
+    - results_p: Optional path provided as an argument.
+    
+    Returns:
+    
+    - The provided path if not None; otherwise, returns the default path stored in the object (`self.results_p`).
+    
+    Notes:
+    
+    - Ensures consistent behavior for saving files across methods without requiring path input every time.
+    """
     def check_if_out_path_is_given(self, results_p):
         #if the path is not provided by argument take the one in object param.
         if results_p == None:
@@ -23,28 +57,26 @@ class Evaluator(ABC):
         return results_p
 
     # === eval_sota ===
+
+    """
+    Computes standard evaluation metrics (SOTA) for binary classification and stores them.
+     
+    Parameters:
+    
+    - **test_y:** Ground truth binary labels for the test set.
+    - **preds:** Binary predictions (0 or 1) made by the model.
+    
+    Returns:
+    
+    - **sota_results:** A dictionary or structured object containing accuracy, recall, precision, F1-score, False positive rate (FPR), and confusion matrix components (TN, FP, FN, TP).
+    
+    Notes:
+    
+    - Handles edge cases where the confusion matrix may have only one class present.
+    - Computes FPR as `fp / (fp + tn)` and handles division errors.
+    - Delegates result packaging to `store_sota_results()` in the `rh` utility module.
+    """
     def eval_sota(self, test_y, preds):
-        
-        """
-        Computes classification metrics for evaluating an intrusion detection model.
-
-        #### Args:
-        ----------
-        - `test_y (np.ndarray)`: Ground truth labels (0 for normal, 1 for anomalous).
-        - `preds (np.ndarray)`: Predicted labels from the model (0 for normal, 1 for anomalous).
-
-        #### Returns:
-        ----------
-        dict: A dictionary containing the following metrics:
-            
-        - `accuracy (float)`: Overall classification accuracy.
-        - `recall (float)`: Proportion of actual positives correctly identified.
-        - `precision (float)`: Proportion ofpositive predicted positivese.
-        - `f1_score (float)`: Harmonic mean of precision and recall.
-        - `fpr (float)`: False positive rate (FP / (FP + TN)).
-        - `tn, fp, fn, tp (int)`: Confusion matrix values.
-        """ 
-        
         acc = sklearn.metrics.accuracy_score(test_y, preds)
         rec = sklearn.metrics.recall_score(test_y, preds)
         prec = sklearn.metrics.precision_score(test_y, preds)
@@ -66,7 +98,29 @@ class Evaluator(ABC):
         sota_results = rh.store_sota_results(acc, rec, prec, f1, fpr, tn, fp, fn, tp) 
         
         return sota_results
-        
+
+    # === bin_preds_for_given_fpr ===
+
+    """
+    Converts predicted probabilities into binary predictions based on specified false positive rates (FPRs).
+    
+    Parameters:
+    
+    - test_y: Ground truth binary labels for the test set.
+    - preds_proba: Predicted class probabilities (2D array; positive class at index 1).
+    - desired_fprs: List of target FPR thresholds to generate binary predictions for.
+    - verbose: If True, prints the resulting binary predictions.
+    
+    Returns:
+    
+    - bin_preds_fpr: List of binary prediction arrays, one for each desired FPR.
+    
+    Notes:
+    
+    - Computes the ROC curve using `roc_curve()`.
+    - For each desired FPR, finds the closest matching threshold and uses it to binarize predictions.
+    - The result is a list of binary label arrays aligned with the requested FPR levels.
+    """
     def bin_preds_for_given_fpr(self, test_y, preds_proba, desired_fprs, verbose=False):
         #compute the roc curve using model prediction probabilities 
         #select the index of the fpr to consider, find the thresholds for the desired FPRs, and compute binary predictions based on FPR thresholds 
