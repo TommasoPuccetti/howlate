@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>results_handler.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>results_handler.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <p>This module handles the aggregation and export of evaluation results for an Intrusion Detection model.</p>
+<h3>Result Handling Overview</h3>
+<p>Steps:</p>
+<ol>
+<li><strong>Per-Sequence Results:</strong> Captures detection time, latency, and classification metrics per attack sequence.</li>
+<li><strong>Aggregate Results by Attack Type:</strong> Computes average and statistical summaries (mean, min, max, std) of performance per attack type.</li>
+<li><strong>Overall Evaluation Metrics:</strong> Summarizes results across all sequences.</li>
+<li><strong>Exporting Results to Excel:</strong> Consolidates detailed and summary outputs into structured Excel files with multiple sheets.</li>
+</ol>
+<h3>Main Result Handling Functions</h3>
+<h4>store_sequence_results()</h4>
+<p>Appends detection results for a single attack sequence to a DataFrame
+(See implementation: <a href="results_handler.html#store_sequence_results">here</a>)</p>
+<h4>store_results_for_attack_type()</h4>
+<p>Aggregates per-sequence results into statistical summaries grouped by attack type.
+(See implementation: <a href="results_handler.html#store_results_for_attack_type">here</a>)</p>
+<h4>store_overall_results()</h4>
+<p>Computes overall detection performance metrics across all sequences.
+(See implementation: <a href="results_handler.html#store_overall_results">here</a>)</p>
+<h4>convert_timedelta_to_seconds()</h4>
+<p>Converts timedelta fields in result DataFrames to float seconds.
+(See implementation: <a href="results_handler.html#convert_timedelta_to_seconds">here</a>)</p>
+<h4>all_latency_results_to_excel()</h4>
+<p>Exports detailed per-sequence results and summary statistics to an Excel file with multiple sheets.
+(See implementation: <a href="results_handler.html#all_latency_results_to_excel">here</a>)</p>
+<h4>summary_fpr_latency_sdr_to_excel()</h4>
+<p>Exports summary tables of latency and SDR tradeoffs across FPR thresholds to Excel file.
+(See implementation: <a href="results_handler.html#summary_fpr_latency_sdr_to_excel">here</a>)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">config</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">store_sota_results</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="n">rec</span><span class="p">,</span> <span class="n">prec</span><span class="p">,</span> <span class="n">f1</span><span class="p">,</span> <span class="n">fpr</span><span class="p">,</span> <span class="n">tn</span><span class="p">,</span> <span class="n">fp</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">tp</span><span class="p">):</span>
+    <span class="n">sota_results</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="n">acc</span><span class="p">,</span>
+        <span class="s2">&quot;recall&quot;</span><span class="p">:</span> <span class="n">rec</span><span class="p">,</span>
+        <span class="s2">&quot;precision&quot;</span><span class="p">:</span> <span class="n">prec</span><span class="p">,</span>
+        <span class="s2">&quot;f1-score&quot;</span><span class="p">:</span> <span class="n">f1</span><span class="p">,</span>
+        <span class="s2">&quot;fpr&quot;</span><span class="p">:</span> <span class="n">fpr</span><span class="p">,</span>
+        <span class="s2">&quot;tn&quot;</span><span class="p">:</span> <span class="n">tn</span><span class="p">,</span>
+        <span class="s2">&quot;fp&quot;</span><span class="p">:</span><span class="n">fp</span><span class="p">,</span>
+        <span class="s2">&quot;fn&quot;</span><span class="p">:</span> <span class="n">fn</span><span class="p">,</span>
+        <span class="s2">&quot;tp&quot;</span><span class="p">:</span> <span class="n">tp</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">sota_results</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">init_sequence_results_dict</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+        <span class="s1">&#39;start_idx_attack&#39;</span><span class="p">,</span> <span class="s1">&#39;end_idx_attack&#39;</span><span class="p">,</span> <span class="s1">&#39;attack_duration&#39;</span><span class="p">,</span> <span class="s1">&#39;attack_latency&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;idx_detection_abs&#39;</span><span class="p">,</span> <span class="s1">&#39;idx_detection_rel&#39;</span><span class="p">,</span> <span class="s1">&#39;attack_len&#39;</span><span class="p">,</span> <span class="s1">&#39;attack_type&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;pr&#39;</span><span class="p">,</span> <span class="s1">&#39;rec&#39;</span><span class="p">,</span> <span class="s1">&#39;fpr&#39;</span><span class="p">,</span> <span class="s1">&#39;tn&#39;</span><span class="p">,</span> <span class="s1">&#39;fp&#39;</span><span class="p">,</span> <span class="s1">&#39;fn&#39;</span><span class="p">,</span> <span class="s1">&#39;tp&#39;</span><span class="p">,</span> <span class="s1">&#39;target_fpr&#39;</span><span class="p">,</span> <span class="s1">&#39;detected&#39;</span><span class="p">])</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <h3><span id="store_sequence_results" href="store_sequence_results"> store_sequence_results </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <p>This function appends detection results for a single attack sequence to an evaluation DataFrame.
+It gathers latency, classification, and sequence metadata into a structured format for further 
+analysis or reporting, especially when evaluating classifier performance over sequences.</p>
+<p>Parameters:</p>
+<ul>
+<li><strong>df:</strong> Existing pandas DataFrame collecting results across sequences.</li>
+<li><strong>latency_seq_res:</strong> Dictionary containing detection latency and index information for the current sequence.</li>
+<li><strong>seq_sota_eval:</strong> Dictionary with classification metrics (e.g., precision, recall, FPR) for the sequence.</li>
+<li><strong>y_test_atk:</strong> Ground truth binary labels for the attack sequence (typically all 1s).</li>
+<li><strong>test_multi:</strong> Array of multi-label annotations (e.g., attack types), indexed the same as the test set.</li>
+<li><strong>desired_fpr:</strong> The specific false positive rate threshold being evaluated.</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li><strong>df:</strong> Updated pandas DataFrame with a new row containing the evaluation results for the current sequence.</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">store_sequence_results</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">latency_seq_res</span><span class="p">,</span> <span class="n">seq_sota_eval</span><span class="p">,</span> <span class="n">y_test_atk</span><span class="p">,</span> <span class="n">test_multi</span><span class="p">,</span> <span class="n">desired_fpr</span><span class="p">):</span>
+
+    <span class="n">new_row</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;start_idx_attack&#39;</span><span class="p">:</span> <span class="n">latency_seq_res</span><span class="p">[</span><span class="s1">&#39;atk_start_idx&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;end_idx_attack&#39;</span><span class="p">:</span> <span class="n">latency_seq_res</span><span class="p">[</span><span class="s1">&#39;atk_end_idx&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;attack_duration&#39;</span><span class="p">:</span> <span class="n">latency_seq_res</span><span class="p">[</span><span class="s1">&#39;atk_time&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;attack_latency&#39;</span><span class="p">:</span> <span class="n">latency_seq_res</span><span class="p">[</span><span class="s1">&#39;det_time&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;idx_detection_abs&#39;</span><span class="p">:</span> <span class="n">latency_seq_res</span><span class="p">[</span><span class="s1">&#39;det_idx_abs&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;idx_detection_rel&#39;</span><span class="p">:</span> <span class="n">latency_seq_res</span><span class="p">[</span><span class="s1">&#39;det_idx_rel&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;attack_len&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">y_test_atk</span><span class="p">),</span>
+        <span class="s1">&#39;attack_type&#39;</span><span class="p">:</span> <span class="n">test_multi</span><span class="p">[</span><span class="n">latency_seq_res</span><span class="p">[</span><span class="s1">&#39;atk_start_idx&#39;</span><span class="p">]],</span>
+        <span class="s1">&#39;pr&#39;</span><span class="p">:</span> <span class="n">seq_sota_eval</span><span class="p">[</span><span class="s1">&#39;precision&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;rec&#39;</span><span class="p">:</span> <span class="n">seq_sota_eval</span><span class="p">[</span><span class="s1">&#39;recall&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;fpr&#39;</span><span class="p">:</span> <span class="n">seq_sota_eval</span><span class="p">[</span><span class="s1">&#39;fpr&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;fp&#39;</span><span class="p">:</span> <span class="n">seq_sota_eval</span><span class="p">[</span><span class="s1">&#39;fp&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;fn&#39;</span><span class="p">:</span> <span class="n">seq_sota_eval</span><span class="p">[</span><span class="s1">&#39;fn&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;tp&#39;</span><span class="p">:</span> <span class="n">seq_sota_eval</span><span class="p">[</span><span class="s1">&#39;tp&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;tn&#39;</span><span class="p">:</span> <span class="n">seq_sota_eval</span><span class="p">[</span><span class="s1">&#39;tn&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;target_fpr&#39;</span><span class="p">:</span> <span class="n">desired_fpr</span><span class="p">,</span>
+        <span class="s1">&#39;detected&#39;</span><span class="p">:</span> <span class="n">latency_seq_res</span><span class="p">[</span><span class="s1">&#39;det&#39;</span><span class="p">]</span>
+    <span class="p">}</span>
+    
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">new_row</span><span class="p">])],</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <h3><span id="store_results_for_attack_type" href="store_results_for_attack_type"> store_results_for_attack_type </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      <p>This function aggregates sequence-level evaluation results for a specific attack type.
+It computes descriptive statistics (mean, min, max, std) for key performance metrics 
+such as attack duration, latency, detection index, precision, recall, and FPR.</p>
+<p>Parameters:</p>
+<ul>
+<li><strong>df:</strong> DataFrame containing per-sequence evaluation results, typically generated using 
+      <code>store_sequence_results</code>.</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li><strong>avg_result_df:</strong> DataFrame with aggregated statistics across sequences, with time-based 
+    fields (e.g., latency) converted to seconds for interpretability.</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">store_results_for_attack_type</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+        
+    <span class="n">avg_result_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">agg</span><span class="p">({</span>
+        <span class="s1">&#39;attack_len&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="s1">&#39;min&#39;</span><span class="p">,</span> <span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;fpr&#39;</span><span class="p">:</span> <span class="s1">&#39;mean&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;pr&#39;</span><span class="p">:</span> <span class="s1">&#39;mean&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;rec&#39;</span><span class="p">:</span> <span class="s1">&#39;mean&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;attack_latency&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="s1">&#39;min&#39;</span><span class="p">,</span> <span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">],</span>
+        <span class="s1">&#39;idx_detection_rel&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;mean&#39;</span><span class="p">,</span> <span class="s1">&#39;min&#39;</span><span class="p">,</span> <span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="s1">&#39;std&#39;</span><span class="p">]})</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+    <span class="n">avg_result_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;_&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">avg_result_df</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="n">avg_result_df</span> <span class="o">=</span> <span class="n">convert_timedelta_to_seconds</span><span class="p">(</span><span class="n">avg_result_df</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">avg_result_df</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-8'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-8'>#</a>
+      </div>
+      <h3><span id="store_overall_results" href="store_overall_results"> store_overall_results </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-9'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-9'>#</a>
+      </div>
+      <p>This function summarizes overall detection performance across all attack sequences for a given FPR.
+It computes aggregate metrics such as sequence detection rate, latency statistics, and relative 
+detection index statistics, encapsulating them in a single-row DataFrame for concise reporting.</p>
+<p>Parameters:</p>
+<ul>
+<li><strong>target_fpr:</strong> The false positive rate threshold under evaluation.</li>
+<li><strong>df:</strong> DataFrame containing per-sequence evaluation results (from <code>store_sequence_results</code>).</li>
+<li><strong>num_detected:</strong> Number of sequences where an attack was successfully detected.</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li><strong>all_results_df:</strong> Single-row DataFrame containing summary statistics for all sequences at the given FPR.</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">store_overall_results</span><span class="p">(</span><span class="n">target_fpr</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">num_detected</span><span class="p">):</span>
+
+    <span class="n">result_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;detected_sequences&#39;</span><span class="p">:</span> <span class="n">num_detected</span><span class="p">,</span>
+        <span class="s1">&#39;all_sequences&#39;</span><span class="p">:</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="s1">&#39;sequence_detection_rate&#39;</span><span class="p">:</span> <span class="n">num_detected</span> <span class="o">/</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="s1">&#39;avg_attack_latency&#39;</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;attack_latency&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+        <span class="s1">&#39;std_attack_latency&#39;</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;attack_latency&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+        <span class="s1">&#39;min_attack_latency&#39;</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;attack_latency&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+        <span class="s1">&#39;max_attack_latency&#39;</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;attack_latency&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+        <span class="s1">&#39;avg_idx_detection_rel&#39;</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;idx_detection_rel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span>
+        <span class="s1">&#39;std_idx_detection_rel&#39;</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;idx_detection_rel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span>
+        <span class="s1">&#39;min_idx_detection_rel&#39;</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;idx_detection_rel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+        <span class="s1">&#39;max_idx_detection_rel&#39;</span><span class="p">:</span> <span class="n">df</span><span class="p">[</span><span class="s1">&#39;idx_detection_rel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+        <span class="s1">&#39;target_fpr&#39;</span><span class="p">:</span> <span class="n">target_fpr</span><span class="p">}</span>
+    <span class="n">all_results_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">result_dict</span><span class="p">])</span>
+    
+    <span class="k">return</span> <span class="n">all_results_df</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-10'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-10'>#</a>
+      </div>
+      <h3><span id="convert_timedelta_to_seconds" href="convert_timedelta_to_seconds"> convert_timedelta_to_seconds </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-11'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-11'>#</a>
+      </div>
+      <p>This utility function converts all timedelta columns in a DataFrame to floating-point 
+values representing total seconds. It is useful for normalizing time-based metrics 
+into a consistent and interpretable format.</p>
+<p>Parameters:</p>
+<ul>
+<li><strong>data:</strong> pandas DataFrame potentially containing columns of dtype &lsquo;timedelta64&rsquo;.</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li><strong>data:</strong> The same DataFrame with all timedelta columns converted to float seconds.</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">convert_timedelta_to_seconds</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+
+    <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">select_dtypes</span><span class="p">(</span><span class="n">include</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;timedelta64&#39;</span><span class="p">]):</span>
+            <span class="n">data</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span>  <span class="c1"># Convert to float seconds</span>
+        <span class="k">return</span> <span class="n">data</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-12'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-12'>#</a>
+      </div>
+      <h3><span id="all_latency_results_to_excel" href="all_latency_results_to_excel"> all_latency_results_to_excel </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-13'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-13'>#</a>
+      </div>
+      <p>This function exports detailed and summary detection results to an Excel file with multiple sheets.
+It converts all time-based columns to seconds, filters detected sequences, and saves comprehensive
+results, averages, and detection statistics for the evaluated FPR.</p>
+<p>Parameters:</p>
+<ul>
+<li><strong>results_p:</strong> Path to the directory where the Excel file should be saved.</li>
+<li><strong>target_fpr:</strong> String label for the current false positive rate (used in the filename).</li>
+<li><strong>df:</strong> DataFrame with per-sequence evaluation results.</li>
+<li><strong>avg_result_df:</strong> DataFrame with aggregated statistics for each attack type.</li>
+<li><strong>detection_rate_df:</strong> DataFrame with detection rates grouped by attack type.</li>
+<li><strong>all_results_df:</strong> DataFrame containing overall summary metrics across all sequences.</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li><strong>None</strong> — results are written directly to an Excel file at the specified location.</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">all_latency_results_to_excel</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="n">target_fpr</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">avg_result_df</span><span class="p">,</span> <span class="n">detection_rate_df</span><span class="p">,</span> <span class="n">all_results_df</span><span class="p">):</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">convert_timedelta_to_seconds</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="n">df_detect</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;detected&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
+    
+    <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span>  <span class="n">target_fpr</span> <span class="o">+</span> <span class="s1">&#39;_lat.xlsx&#39;</span><span class="p">),</span> <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;xlsxwriter&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;all_sequences_results&#39;</span><span class="p">)</span>
+        <span class="n">df_detect</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;detected_sequences_results&#39;</span><span class="p">)</span>
+        <span class="n">avg_result_df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;avg_results_for_attack_type&#39;</span><span class="p">)</span>
+        <span class="n">detection_rate_df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;detection_rate_for_attack_type&#39;</span><span class="p">)</span>
+        <span class="n">all_results_df</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;overall_results&#39;</span><span class="p">)</span>
+        <span class="n">all_results_df</span><span class="p">[[</span><span class="s1">&#39;detected_sequences&#39;</span><span class="p">,</span> <span class="s1">&#39;all_sequences&#39;</span><span class="p">,</span> <span class="s1">&#39;sequence_detection_rate&#39;</span><span class="p">,</span> <span class="s1">&#39;target_fpr&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;detection_rate_overall&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-14'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-14'>#</a>
+      </div>
+      <h3><span id="summary_fpr_latency_sdr_to_excel" href="summary_fpr_latency_sdr_to_excel"> summary_fpr_latency_sdr_to_excel </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-15'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-15'>#</a>
+      </div>
+      <p>This function exports summary evaluation results across different FPRs to a single Excel file.
+It organizes data into separate sheets for latency trade-offs, per-type sequence detection rates (SDR),
+and overall SDR statistics, enabling a clear comparison of model performance across thresholds.</p>
+<p>Parameters:</p>
+<ul>
+<li><strong>results_p:</strong> Path to the directory where the Excel file should be saved.</li>
+<li><strong>df_fpr_out:</strong> DataFrame containing FPR vs. latency trade-off data.</li>
+<li><strong>df_sdr_out:</strong> DataFrame with sequence detection rate (SDR) by attack type for each FPR.</li>
+<li><strong>df_sdr_out_all:</strong> DataFrame with overall SDR statistics across all attack types and FPRs.</li>
+</ul>
+<p>Returns:</p>
+<ul>
+<li><strong>None</strong> — results are written directly to an Excel file named <code>final_results.xlsx</code>.</li>
+</ul>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-16'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-16'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">summary_fpr_latency_sdr_to_excel</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span> <span class="n">df_fpr_out</span><span class="p">,</span> <span class="n">df_sdr_out</span><span class="p">,</span> <span class="n">df_sdr_out_all</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">pd</span><span class="o">.</span><span class="n">ExcelWriter</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_p</span><span class="p">,</span>  <span class="s1">&#39;final_results.xlsx&#39;</span><span class="p">),</span> <span class="n">engine</span><span class="o">=</span><span class="s1">&#39;xlsxwriter&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">writer</span><span class="p">:</span>
+        <span class="n">df_fpr_out</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;fpr_latency_tradeoff&#39;</span><span class="p">)</span>
+        <span class="n">df_sdr_out</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;fpr_sdr_tradeoff&#39;</span><span class="p">)</span>
+        <span class="n">df_sdr_out_all</span><span class="o">.</span><span class="n">to_excel</span><span class="p">(</span><span class="n">writer</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sheet_name</span><span class="o">=</span><span class="s1">&#39;fpr_sdr_overall&#39;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-17'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-17'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span><span class="w"> </span><span class="nf">create_folder_if_not_exist</span><span class="p">(</span><span class="n">folder_path</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">folder_path</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">folder_path</span><span class="p">)</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

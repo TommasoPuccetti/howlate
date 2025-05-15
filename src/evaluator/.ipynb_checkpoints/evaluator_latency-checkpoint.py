@@ -234,7 +234,7 @@ class LatencyEvaluator(Evaluator):
             
         for df in sequences_results: 
             num_seq = df.shape[0] 
-            df['time_to_detect'] = pd.to_timedelta(df['time_to_detect']).dt.total_seconds()
+            df['attack_latency'] = pd.to_timedelta(df['attack_latency']).dt.total_seconds()
             df_detect = df[df['detected'] != 0]
             grouped_df = df.groupby('attack_type')
             grouped_df_det = df_detect.groupby('attack_type').size().reset_index(name='count_det')
@@ -286,7 +286,7 @@ class LatencyEvaluator(Evaluator):
             target_fpr = df_sdr['target_fpr'].unique()[0]
             
             df_fpr_out = df_fpr.set_index('attack_type_').T
-            selected_row = df_fpr_out.loc['time_to_detect_mean']
+            selected_row = df_fpr_out.loc['attack_latency_mean']
             selected_row = selected_row.to_frame().T
             selected_row['target_fpr'] = [target_fpr]
             rows_fpr.append(selected_row)

@@ -39,7 +39,6 @@ class Plotter():
     - Used primarily to ensure consistent access to the summary Excel file for plotting or evaluation.
     """
     def check_if_path_is_given(self, path):
-        #if the path is not provided by argument take the one in object param.
         if path == None:
             path = self.results_p
         else:
@@ -88,23 +87,17 @@ class Plotter():
 
         plt.figure(figsize=(6, 4), dpi=400)
         
-        # Exclude the target column (replace 'fpr' with the actual column name if different)
         columns_to_plot = [col for col in df_latency.columns if col != "target_fpr"]
 
-        # Plot each selected column
         for col in columns_to_plot:
             plt.plot(x_ticks, df_latency[col], label=col)
 
         plt.subplots_adjust(bottom=0.15)
-        # Set x-ticks to be the normalized values
         plt.xticks(x_ticks, labels=df_latency['target_fpr'])
         
-        
-        # Compute mean for each row (excluding 'target_fpr' column)
         df_sdr.drop(columns=['target_fpr'], inplace=True)
     
-        # Annotate with mean values
-        for i, (x, mean_value) in enumerate(zip(x_ticks, df_sdr['percent_detected_sequences'])):
+        for i, (x, mean_value) in enumerate(zip(x_ticks, df_sdr['sequence_detection_rate'])):
             plt.annotate(f"{mean_value:.3f}", (x, 0), 
                          textcoords="offset points", xytext=(0, -35), 
                          ha='center', fontsize=8, color='red')

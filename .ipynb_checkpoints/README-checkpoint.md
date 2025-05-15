@@ -10,6 +10,15 @@ In the following, we resume the different steps from the creation of a dataset t
 
 ---
 
+## Installation 
+
+To install the script the only steps are to create and activate a conda environment using the howlate_env.yml file. The folowing commands will install the required dependecy to run:
+
+1) conda env create -f howlate_env.yml
+2) conda activate latency
+
+To replicate the results of the paper you can use the ./data folder from https://drive.google.com/drive/folders/1kUnCcT_ZLSUNPyLF8bN3ycsmG4K066GX?usp=sharing
+
 ## 1) Process Raw Data
 
 ### 1a) Split PCAPs (Optional)

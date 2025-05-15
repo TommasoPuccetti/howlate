@@ -15,6 +15,7 @@ from loader  import PathManager
 class DatasetBuilder():
     
     def __init__(self, pm: PathManager):
+        self.labels = pm.labels
         self.ntest_csv_p = pm.ntest_csv_p
         self.ntrain_csv_p = pm.ntrain_csv_p
         self.atest_csvs_p = pm.atest_csvs_p
@@ -88,7 +89,7 @@ class DatasetBuilder():
             a_paths = self.atrain_csvs_p
             o_path = self.out_train_p
         
-        normal_df = pd.read_csv(n_path)#nrows=200
+        normal_df = pd.read_csv(n_path)
         features = normal_df.columns
         features = features.to_list()
         features.append('label')
@@ -157,7 +158,13 @@ class DatasetBuilder():
         
             merged_df = self.merge(normal_df_temp, attack_df_2, timestamp, features)
         
-            merged_df[features].to_csv(o_path, mode='a', index=False, header=not pd.io.common.file_exists(o_path))
+            merged_df[features].to_csv(o_path, mode='a', index=False, header=not pd.io.common.file_exists(o_path)) 
+        
+        if test_train == 'test':
+            np.save(self.labels + '/test_multi_label', merged_df['label'].to_numpy())
+            np.save(self.labels + '/test_timestamp', merged_df[timestamp])
+            test_y = merged_df['label'].to_numpy()
+            np.save(self.labels + '/test_y', test_y)
             
     def shorten_attack_duration(self, df, timestamp_col, start_time):
         
@@ -193,7 +200,7 @@ class DatasetBuilder():
     def extract_sequences(self, test_train):
         
         i_path = self.out_test_p
-        o_path = self.train_test
+        o_path = self.labels
         if test_train == 'train':
             i_path = self.out_train_p
         

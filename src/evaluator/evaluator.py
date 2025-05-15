@@ -51,7 +51,6 @@ class Evaluator(ABC):
     - Ensures consistent behavior for saving files across methods without requiring path input every time.
     """
     def check_if_out_path_is_given(self, results_p):
-        #if the path is not provided by argument take the one in object param.
         if results_p == None:
             results_p = self.results_p
         return results_p
@@ -83,9 +82,9 @@ class Evaluator(ABC):
         f1 = sklearn.metrics.f1_score(test_y, preds)
         cm = metrics.confusion_matrix(test_y, preds)
         
-        if cm.shape == (1, 1):  # If there's only one class present
+        if cm.shape == (1, 1):  
             tn, fp, fn, tp = (cm[0, 0], 0, 0, 0) if test_y[0] == 0 else (0, 0, 0, cm[0, 0])
-        elif cm.shape == (2, 2):  # Normal case
+        elif cm.shape == (2, 2): 
             tn, fp, fn, tp = cm.ravel()
         else:
             raise ValueError(f"Unexpected confusion matrix shape: {cm.shape}")
@@ -122,8 +121,6 @@ class Evaluator(ABC):
     - The result is a list of binary label arrays aligned with the requested FPR levels.
     """
     def bin_preds_for_given_fpr(self, test_y, preds_proba, desired_fprs, verbose=False):
-        #compute the roc curve using model prediction probabilities 
-        #select the index of the fpr to consider, find the thresholds for the desired FPRs, and compute binary predictions based on FPR thresholds 
         fpr, tpr, thresholds = metrics.roc_curve(test_y, preds_proba[:,1])
         fpr_indexes = [np.argmax(fpr > val) for val in desired_fprs] 
         fpr_thresholds = thresholds[fpr_indexes]

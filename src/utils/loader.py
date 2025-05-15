@@ -9,10 +9,10 @@ import os
 from config import *
 import results_handler as rh 
 
-
-#TODO a function that takes your data_frame and produces dataset files needed for the evaluation method.
-
 class PathManager:
+    
+    # === PathManager ===
+    
     """
     Initialize the paths to files needed for evaluation.
      
@@ -89,10 +89,10 @@ class PathManager:
         return path
     @property
     def ntest_csv_p(self):
-        return os.path.join(self.raw_converted_n, "train_merged.csv")
+        return os.path.join(self.raw_converted_n, "test_merged.csv")
     @property
     def ntrain_csv_p(self):
-        return os.path.join(self.raw_converted_n, "test_merged.csv")
+        return os.path.join(self.raw_converted_n, "train_merged.csv")
     @property
     def ntest_csvs_p(self):
         normal_root_test = os.path.join(self.files, "raw/converted/normal/test")
@@ -148,6 +148,9 @@ class PathManager:
 
 
 class DataLoader:
+    
+    # === DataLoader
+    
     """
     Load files needed for evaluation.
     

@@ -110,14 +110,13 @@ class SotaEvaluator(Evaluator):
                 sota_results_fpr.append(sota_results)
             
             df = pd.DataFrame(sota_results_fpr)
-            df.to_csv(os.path.join(results_p, str(desired_fpr) + '.csv'))
+            df.to_csv(os.path.join(results_p, str(desired_fpr) + '_sota.csv'))
             sota_results_fprs.append(df)
             
         self.sota_results_fprs = sota_results_fprs
 
         return sota_results_fprs
 
-    # TODO: This maybe is not necessary
     def evaluate_bin_preds(self, test_y, preds):
         return self.eval_sota(test_y, preds)
 
@@ -199,6 +198,6 @@ class SotaEvaluator(Evaluator):
             plt.xlabel('Recall', fontsize=20)
             plt.xticks(fontsize=16)
             plt.yticks(fontsize=16)
-            plt.savefig(os.path.join(results_p, "precision_recall_curve.pdf"), format='pdf', bbox_inches='tight')
+            plt.savefig(os.path.join(results_p, "prec_recall_curve.pdf"), format='pdf', bbox_inches='tight')
             plt.show()
         
