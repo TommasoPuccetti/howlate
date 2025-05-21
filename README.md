@@ -118,15 +118,16 @@ python evaluate.py <dataset_name> <model_name>
 python evaluate.py cic_iot_23 xgb
 ```
 
-#### 📂 Required Files (in `train_test/` folder):
+#### 📂 Required Files (in `dataset/train_test/` folder):
 
 - `test_y.npy` — Binary ground-truth labels (0 = normal, 1 = attack)
 - `test_multi_label.npy` — Multi-class attack labels (e.g., `icmp_dos`, `scan`)
 - `test_timestamp.npy` — Capture timestamps for each packet
 - `test_sequences.pkl` — List of packet indices for each attack sequence
+
+#### 📂 Required Files (in `models/model_name/preds/` folder):
 - `preds.npy` — Final binary predictions from the model
 - `preds_proba.npy` — Prediction probabilities from the model
-
 ---
 
 ## 📚 References
