@@ -6,8 +6,8 @@ This module define the PathManager class that handles the input and output path 
 import numpy as np
 import pandas as pd 
 import os
-from config import *
-import results_handler as rh 
+from src.utils.config import *
+import src.utils.results_handler as rh 
 
 class PathManager:
     
@@ -51,7 +51,7 @@ class PathManager:
         return path
     @property
     def test_y_p(self):
-        return os.path.join(self.labels, "test_y.npy")
+        return os.path.join(self.target_model, "test_y.npy")
     @property
     def test_multi_p(self):
         return os.path.join(self.labels, "test_multi_label.npy")
@@ -166,22 +166,31 @@ class DataLoader:
     """
     def __init__(self, paths: PathManager):
         self.paths = paths
-    
+        self.start_idx =  len(np.load(self.paths.test_y_p, allow_pickle=True))- len(np.load(self.paths.preds_proba_p, allow_pickle=True))
+        print("----------------------------------------------------------------------------------------------")
+        print("Start index for predictions: -------------------------------------------------------------- ", self.start_idx)
+        print("----------------------------------------------------------------------------------------------")
+
     @property
     def test_y(self):
-        return np.load(self.paths.test_y_p, allow_pickle=True)
+        print("TEST_Y")
+        print(len(np.load(self.paths.test_y_p, allow_pickle=True)[self.start_idx:]))
+        return np.load(self.paths.test_y_p, allow_pickle=True)[self.start_idx:]
     @property
     def test_multi(self):
-        return np.load(self.paths.test_multi_p, allow_pickle=True)
+        return np.load(self.paths.test_multi_p, allow_pickle=True)[self.start_idx:]
     @property
     def test_timestamp(self):
-        return np.load(self.paths.test_timestamp_p, allow_pickle=True)
+        return np.load(self.paths.test_timestamp_p, allow_pickle=True)[self.start_idx:]
     @property
     def test_seq(self):
-        return np.load(self.paths.test_seq_p, allow_pickle=True)
+        test_seq = np.load(self.paths.test_seq_p, allow_pickle=True)
+        return [[elem - self.start_idx for elem in sublist] for sublist in test_seq]
     @property
     def preds_proba(self):
-        return np.load(self.paths.preds_proba_p, allow_pickle=True)
+        print("PREDS PROBA")
+        print(len(np.load(self.paths.preds_proba_p, allow_pickle=True)))
+        return np.load(self.paths.preds_proba_p, allow_pickle=True) 
     @property
     def preds(self):
-        return np.load(self.paths.preds_p, allow_pickle=True)
+        return np.load(self.paths.preds_p, allow_pickle=True)[self.start_idx:]

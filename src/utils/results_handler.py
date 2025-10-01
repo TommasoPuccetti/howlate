@@ -1,5 +1,5 @@
 import pandas as pd
-from config import *
+from src.utils.config import *
 import os 
 
 """
@@ -83,7 +83,8 @@ Returns:
 - **df:** Updated pandas DataFrame with a new row containing the evaluation results for the current sequence.
 """
 def store_sequence_results(df, latency_seq_res, seq_sota_eval, y_test_atk, test_multi, desired_fpr):
-
+    #print("DEBUG - Esempio test_multi:", test_multi[:10])
+    #print("DEBUG - Tipo elemento test_multi:", type(test_multi[0]))
     new_row = {
         'start_idx_attack': latency_seq_res['atk_start_idx'],
         'end_idx_attack': latency_seq_res['atk_end_idx'],

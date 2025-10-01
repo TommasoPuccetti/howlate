@@ -159,6 +159,9 @@ class LatencyEvaluator(Evaluator):
             detected = 1
         else:
             index_rel = len(seq) - 1
+            print(f"index_rel: {index_rel}")
+            print(f"y_test_atk shape: {y_test_atk.shape}, type: {type(y_test_atk[index_rel])}, value: {y_test_atk[index_rel]}")
+            print(f"seq type: {type(seq)}, len: {len(seq)}")
             index_abs = seq[y_test_atk[index_rel]]
             detection_time = attack_time  # If undetected, assign full attack time
             detected = 0

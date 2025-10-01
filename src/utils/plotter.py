@@ -80,6 +80,26 @@ class Plotter():
         df_sdr = pd.read_excel(self.df_results_p, sheet_name='fpr_sdr_overall')
         
         df_latency.sort_values('target_fpr', inplace=True)
+
+        """
+         # === NORMALIZZAZIONE DEI VALORI DI LATENZA ===
+        # Normalizza tutti i valori tranne 'target_fpr' tra 0 e 1
+        for col in df_latency.columns:
+            if col != 'target_fpr':
+                min_val = df_latency[col].min()
+                max_val = df_latency[col].max()
+                if max_val != min_val:
+                    df_latency[col] = (df_latency[col] - min_val) / (max_val - min_val)
+        """
+
+
+
+
+
+
+
+
+
         df_sdr.sort_values('target_fpr', inplace=True)
 
         num_points = len(df_latency['target_fpr'])

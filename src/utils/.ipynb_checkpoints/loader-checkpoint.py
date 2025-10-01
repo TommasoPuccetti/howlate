@@ -166,22 +166,29 @@ class DataLoader:
     """
     def __init__(self, paths: PathManager):
         self.paths = paths
-    
+        self.start_idx =  len(np.load(self.paths.test_y_p, allow_pickle=True))- len(np.load(self.paths.preds_proba_p, allow_pickle=True))
+        
+
     @property
     def test_y(self):
-        return np.load(self.paths.test_y_p, allow_pickle=True)
+        print("TEST_Y")
+        print(len(np.load(self.paths.test_y_p, allow_pickle=True)[self.start_idx:]))
+        return np.load(self.paths.test_y_p, allow_pickle=True)[self.start_idx:]
     @property
     def test_multi(self):
-        return np.load(self.paths.test_multi_p, allow_pickle=True)
+        return np.load(self.paths.test_multi_p, allow_pickle=True)[self.start_idx:]
     @property
     def test_timestamp(self):
-        return np.load(self.paths.test_timestamp_p, allow_pickle=True)
+        return np.load(self.paths.test_timestamp_p, allow_pickle=True)[self.start_idx:]
     @property
     def test_seq(self):
-        return np.load(self.paths.test_seq_p, allow_pickle=True)
+        test_seq = np.load(self.paths.test_seq_p, allow_pickle=True)
+        return [[elem - self.start_idx for elem in sublist] for sublist in test_seq]
     @property
     def preds_proba(self):
-        return np.load(self.paths.preds_proba_p, allow_pickle=True)
+        print("PREDS PROBA")
+        print(len(np.load(self.paths.preds_proba_p, allow_pickle=True)))
+        return np.load(self.paths.preds_proba_p, allow_pickle=True) 
     @property
     def preds(self):
-        return np.load(self.paths.preds_p, allow_pickle=True)
+        return np.load(self.paths.preds_p, allow_pickle=True)[self.start_idx:]

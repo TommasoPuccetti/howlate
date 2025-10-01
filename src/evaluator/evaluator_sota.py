@@ -192,8 +192,10 @@ class SotaEvaluator(Evaluator):
             if results_p == None:
                 results_p = self.results_p
             plt.figure(dpi=400)
-            fpr, tpr, _ = metrics.precision_recall_curve(test_y,  preds_proba[:,1])
-            plt.plot(fpr, tpr)
+            #fpr, tpr, _ = metrics.precision_recall_curve(test_y,  preds_proba[:,1])
+            #plt.plot(fpr, tpr)
+            precision, recall, _ = metrics.precision_recall_curve(test_y,  preds_proba[:,1])
+            plt.plot(recall, precision)
             plt.ylabel('Precision', fontsize=20)
             plt.xlabel('Recall', fontsize=20)
             plt.xticks(fontsize=16)
