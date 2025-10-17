@@ -102,12 +102,16 @@ class SotaEvaluator(Evaluator):
         
         for bin_pred, desired_fpr in zip(bin_preds_fpr, desired_fprs):
             sota_results_fpr = []
-
+        
             for indexes, i in zip(atk_index_list, range(0, len(atk_index_list))):
-
+                
                 sota_results = self.eval_sota(test_y[indexes], bin_pred[indexes])
                 sota_results['attack'] = attacks[i]
                 sota_results_fpr.append(sota_results)
+
+            sota_results = self.eval_sota(test_y, bin_pred)
+            sota_results['attack'] = 'overall' 
+            sota_results_fpr.append(sota_results)
             
             df = pd.DataFrame(sota_results_fpr)
             df.to_csv(os.path.join(results_p, str(desired_fpr) + '_sota.csv'))
