@@ -130,6 +130,10 @@ python evaluate.py cic_iot_23 xgb
 - `preds_proba.npy` — Prediction probabilities from the model
 ---
 
+<img width="1352" height="1180" alt="image" src="https://github.com/user-attachments/assets/aafb92ed-e08d-4101-9f78-a2ee68ed271c" />
+
+
+
 ## 📚 References
 
 - [CIC-IoT-2023 Dataset - Canadian Institute for Cybersecurity](https://www.unb.ca/cic/datasets/iot2023.html)
