@@ -51,7 +51,7 @@ class PathManager:
         return path
     @property
     def test_y_p(self):
-        return os.path.join(self.target_model, "test_y.npy")
+        return os.path.join(self.labels, "test_y.npy")
     @property
     def test_multi_p(self):
         return os.path.join(self.labels, "test_multi_label.npy")

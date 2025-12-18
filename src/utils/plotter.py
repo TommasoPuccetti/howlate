@@ -46,8 +46,26 @@ class Plotter():
         
         return path
 
-    # === plot ===
+    
+    def fpr_thr_to_plot(self, df_latency, half, mid_val):
+        num_rows = len(df_latency)
+        half_index = num_rows // 2
+    
+        # Select bottom or top half of rows
+        if half == 'low_half':
+            df_latency = df_latency.iloc[half_index:]  # lower half (bottom)
+        elif half == 'high_half':
+            df_latency = df_latency.iloc[:half_index]  # upper half (top)
+    
+        # Select every second row starting from the first
+        if mid_val == False:
+            df_latency = df_latency.iloc[::2]
+    
+        return df_latency
 
+    
+    # === plot ===    
+        
     """
     Plots the tradeoff between attack detection latency and false positive rate (FPR),
     annotated with the sequence detection rate (SDR) at each FPR level.
@@ -72,7 +90,7 @@ class Plotter():
     
     - Designed to visually assess how changes in FPR affect detection latency and overall performance.
     """
-    def plot(self, results_p=None):
+    def plot(self, results_p=None, half='all', mid_val=True, y_scale='linear', attacks='all', name='default'):
 
         results_p = self.check_if_path_is_given(results_p)
         
@@ -80,54 +98,63 @@ class Plotter():
         df_sdr = pd.read_excel(self.df_results_p, sheet_name='fpr_sdr_overall')
         
         df_latency.sort_values('target_fpr', inplace=True)
-
-        """
-         # === NORMALIZZAZIONE DEI VALORI DI LATENZA ===
-        # Normalizza tutti i valori tranne 'target_fpr' tra 0 e 1
-        for col in df_latency.columns:
-            if col != 'target_fpr':
-                min_val = df_latency[col].min()
-                max_val = df_latency[col].max()
-                if max_val != min_val:
-                    df_latency[col] = (df_latency[col] - min_val) / (max_val - min_val)
-        """
-
-
-
-
-
-
-
-
-
         df_sdr.sort_values('target_fpr', inplace=True)
-
+        
+        df_latency = self.fpr_thr_to_plot(df_latency, half, mid_val)
+        
         num_points = len(df_latency['target_fpr'])
         x_ticks = np.linspace(0, num_points - 1, num_points)
+        plt.figure(figsize=(10, 6), dpi=400)
 
-        plt.figure(figsize=(6, 4), dpi=400)
-        
+        if attacks != 'all':
+            plt.figure(figsize=(10, 2.1), dpi=400)
+            df_latency = df_latency[attacks]
+            
         columns_to_plot = [col for col in df_latency.columns if col != "target_fpr"]
-
-        for col in columns_to_plot:
-            plt.plot(x_ticks, df_latency[col], label=col)
+            
+        cmap = plt.cm.get_cmap('tab20', len(columns_to_plot))
+        
+        for i, col in enumerate(columns_to_plot):
+            plt.plot(x_ticks, df_latency[col], label=col, color=cmap(i))
 
         plt.subplots_adjust(bottom=0.15)
         plt.xticks(x_ticks, labels=df_latency['target_fpr'])
         
         df_sdr.drop(columns=['target_fpr'], inplace=True)
-    
-        for i, (x, mean_value) in enumerate(zip(x_ticks, df_sdr['sequence_detection_rate'])):
-            plt.annotate(f"{mean_value:.3f}", (x, 0), 
-                         textcoords="offset points", xytext=(0, -35), 
-                         ha='center', fontsize=8, color='red')
+
+        ymin, ymax = plt.ylim()
+        offset = (ymax - ymin) * 0.04
         
-        plt.xlabel('false positive rate ; sequence detection rate', labelpad=15, fontsize=12)
-        plt.ylabel('attack latency (seconds)', fontsize=12)
+        if attacks != 'all':
+            offset = (ymax - ymin) * 0.20
+        
+        for x, mean_value in zip(x_ticks, df_sdr['sequence_detection_rate']):
+            plt.annotate(
+                f"{mean_value:.3f}",
+                xy=(x, ymin - offset),      # below the axis, in data coords
+                xycoords='data',
+                ha='center',
+                va='top',
+                fontsize=9,
+                color='red',
+                annotation_clip=False       # make sure it’s visible even outside
+            )
+
+        
+        plt.yscale(y_scale) 
+        plt.xlabel('false positive rate ; sequence detection rate', labelpad=15, fontsize=10)
+        plt.ylabel('attack latency' + '\n' + '(seconds)', fontsize=10)
+
         plt.title(self.title, fontsize=14)
-        plt.legend()
+        
+        if attacks != 'all':
+            plt.title(self.title + ' ' + name, fontsize=10)
+        
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=9.2)
+        plt.tight_layout()
         plt.grid(True)
-        plt.xticks(fontsize=10)
-        plt.yticks(fontsize=10)
-        plt.savefig(os.path.join(results_p, 'final_results.pdf'), format='pdf')
+        plt.xticks(fontsize=9.2)
+        plt.yticks(fontsize=9.2)
+        plt.savefig(os.path.join(results_p, 'final_results_' + '_' + name + '_' + '.pdf'), format='pdf')
+        plt.savefig(os.path.join(results_p, 'final_results_' + '_' + name + '_' + '.png'), format='png')
         plt.show()

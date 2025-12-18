@@ -43,68 +43,78 @@ warnings.filterwarnings('ignore')
 # ----------------------
 parser = argparse.ArgumentParser(description="Evaluate IDS model performance")
 parser.add_argument("dataset", type=str, help="Name of the dataset (e.g., dos_mqtt_iot)")
-parser.add_argument("model", type=str, help="Name of the model used (e.g., extra, xgboost, lstm)")
+parser.add_argument("models", type=lambda s: s.split(","), help="Comma-separated list of models (e.g., extra,xgboost,lstm)")
 parser.add_argument("--verbose", action="store_true", help="Print detailed logs")
 
 args = parser.parse_args()
-#TODO implement a verbose output 
-# ----------------------
-# Load Dataset and Model
-# ----------------------
-print(f"Loading dataset '{args.dataset}' with model '{args.model}'...")
-pm = ld.PathManager(args.dataset, args.model)
-dl = ld.DataLoader(pm)
+#TODO implement a verbose output
 
-# ----------------------
-# Clean result folder
-# ----------------------
+for model in args.models:
 
-result_dir = pm.results_p
-if os.path.exists(result_dir):
-    print(f"Cleaning results directory: {result_dir}")
-    shutil.rmtree(result_dir)
-os.makedirs(result_dir, exist_ok=True)
-
-# ----------------------
-# Initialize Evaluators
-# ----------------------
-latency = LatencyEvaluator(pm)
-sota = SotaEvaluator(pm)
-
-# ----------------------
-# SOTA Evaluation
-# ----------------------
-print("Evaluating SOTA metrics...")
-sota_results_fprs = sota.evaluate(dl.test_y, dl.test_multi, dl.preds_proba)
-sota.evaluate_bin_preds(dl.test_y, dl.preds)
-
-# ----------------------
-# Plot ROC & PR curves
-# ----------------------
-print("Plotting curves...")
-sota.plot_curves(dl.test_y, dl.preds_proba)
-
-# ----------------------
-# Latency Evaluation
-# ----------------------
-print("Evaluating latency metrics...")
-avg_results, tradeoff_summary = latency.evaluate(
-    dl.test_y, dl.test_multi, dl.test_timestamp, dl.test_seq, dl.preds_proba
-)
-
-# ----------------------
-# Plotter
-# ----------------------
-print("Generating latency plots...")
-plot = pl.Plotter(pm, args.model)
-plot.plot()
+    # ----------------------
+    # Load Dataset and Model
+    # ----------------------
+    print(f"Loading dataset '{args.dataset}' with model '{model}'...")
+    pm = ld.PathManager(args.dataset, model)
+    dl = ld.DataLoader(pm)
+    
+    # ----------------------
+    # Clean result folder
+    # ----------------------
+    
+    result_dir = pm.results_p
+    if os.path.exists(result_dir):
+        print(f"Cleaning results directory: {result_dir}")
+        shutil.rmtree(result_dir)
+    os.makedirs(result_dir, exist_ok=True)
+    
+    # ----------------------
+    # Initialize Evaluators
+    # ----------------------
+    latency = LatencyEvaluator(pm)
+    sota = SotaEvaluator(pm)
+    
+    # ----------------------
+    # SOTA Evaluation
+    # ----------------------
+    print("Evaluating SOTA metrics...")
+    sota_results_fprs = sota.evaluate(dl.test_y, dl.test_multi, dl.preds_proba)
+    #sota.evaluate_bin_preds(dl.test_y, dl.preds)
+    
+    # ----------------------
+    # Plot ROC & PR curves
+    # ----------------------
+    print("Plotting curves...")
+    sota.plot_curves(dl.test_y, dl.preds_proba)
+    
+    
+    # ----------------------
+    # Latency Evaluation
+    # ----------------------
+    print("Evaluating latency metrics...")
+    avg_results, tradeoff_summary = latency.evaluate(
+        dl.test_y, dl.test_multi, dl.test_timestamp, dl.test_seq, dl.preds_proba)
+    
+    # ----------------------
+    # Plotter
+    # ----------------------
+    print("Generating latency plots...")
+    plot = pl.Plotter(pm, model)
+    
+    plot.plot()
+    plot.plot(y_scale='log', name='log_scale')
+    plot.plot(mid_val=False, name='half_values')
+    plot.plot(mid_val=False, y_scale='log', name='log_scale_half_values')
+    plot.plot(half='high_half', name='low_fprs')
+    plot.plot(half='high_half', y_scale='log', name='log_scale_low_fprs')
+    plot.plot(half='high_half', mid_val=False, name='half_values_low_fprs')
+    plot.plot(half='high_half', y_scale='log', mid_val=False, name='log_scale_half_values_low_fprs')
+    plot.plot(half='low_half', name='high_fprs')
+    plot.plot(half='low_half', y_scale='log', name='log_scale_high_fprs')
+    plot.plot(half='low_half', mid_val=False, name='half_values_high_fprs')
+    plot.plot(half='low_half', y_scale='log', mid_val=False, name='log_scale_half_values_high_fprs')
+    plot.plot(attacks=['pub_exf', 'brute_force_malformed', 'brute_force_timing', 'nmap_mqtt', 'empty_conn_ddos', 'qos_mid_ddos', 'user_prop_ddos', 'target_fpr'], name='attack subset 3')
+    plot.plot(attacks=[ 'nmap_10_T4', 'nmap_sub', 'qos_mid', 'sftp_inst', 'nmap_10_T5', 'scp_inst', 'slash_char', 'target_fpr'], name='attack subset 2')
+plot.plot(attacks=['dollar_char', 'empty_conn', 'mqtt_cat', 'sftp_exf', 'nmap_banner', 'scp_exf', 'target_fpr'], name='attack subset 1')
 
 print("Evaluation complete.")
-
-
-
-
-    
-
-
-

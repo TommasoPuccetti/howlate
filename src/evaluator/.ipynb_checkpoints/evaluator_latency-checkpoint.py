@@ -34,8 +34,6 @@ import os
 import numpy as np
 import sklearn
 from sklearn import metrics
-import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
 import pandas as pd
 from config import *
 from loader import PathManager
@@ -104,23 +102,19 @@ class LatencyEvaluator(Evaluator):
     - **test_y:** Array of ground truth binary labels.
     - **bin_pred:** Array of predicted binary labels (0 or 1).
     - **seq:** Indices list corresponding to the current sequence.
-    - **last:** Index offset into `bin_pred` to start slicing predictions for this sequence.
     
     Returns:
     
     - **seq_y:** Ground truth labels for the current sequence.
     - **seq_preds:** Predicted labels for the current sequence.
     - **y_test_atk:** Indices within the sequence where attacks (label==1) occur.
-    - **last:** Updated offset for the next sequence.
     """
-    def atk_sequence_from_seq_idxs(self, test_y, bin_pred, seq, last):
+    def atk_sequence_from_seq_idxs(self, test_y, bin_pred, seq):
         seq_y = test_y[seq]
-        seq_preds = np.array(bin_pred[last: last + seq_y.shape[0]])
+        seq_preds = np.array(bin_pred[seq])
         y_test_atk = np.where(seq_y == 1)[0]
-        if len(y_test_atk) == 0:
-            last += len(seq_y)
 
-        return seq_y, seq_preds, y_test_atk, last
+        return seq_y, seq_preds, y_test_atk
 
     # === eval_sequence_latency ===
 
@@ -158,11 +152,8 @@ class LatencyEvaluator(Evaluator):
             detection_time = test_timestamp[index_abs] - test_timestamp[attack_start_idx]
             detected = 1
         else:
-            index_rel = len(seq) - 1
-            print(f"index_rel: {index_rel}")
-            print(f"y_test_atk shape: {y_test_atk.shape}, type: {type(y_test_atk[index_rel])}, value: {y_test_atk[index_rel]}")
-            print(f"seq type: {type(seq)}, len: {len(seq)}")
-            index_abs = seq[y_test_atk[index_rel]]
+            index_rel = y_test_atk[-1]
+            index_abs = seq[index_rel]
             detection_time = attack_time  # If undetected, assign full attack time
             detected = 0
 
@@ -201,14 +192,12 @@ class LatencyEvaluator(Evaluator):
     - **sequences_results:** DataFrame or dictionary of evaluation metrics per seq
     """
     def eval_all_attack_sequences(self, test_y, test_multi, test_timestamp, test_seq, bin_pred, desired_fpr, results_p, verbose):
-        sequences_results = rh.init_sequence_results_dict()
-        last = 0  
+        sequences_results = rh.init_sequence_results_dict()  
         for i, seq in enumerate(test_seq):
-            seq_y, seq_preds, y_test_atk, last = self.atk_sequence_from_seq_idxs(test_y, bin_pred, seq, last)
+            seq_y, seq_preds, y_test_atk = self.atk_sequence_from_seq_idxs(test_y, bin_pred, seq)
             seq_sota_eval = self.eval_sota(seq_y, seq_preds)
             latency_seq_res = self.eval_sequence_latency(seq, y_test_atk, test_timestamp, seq_preds)
             sequences_results = rh.store_sequence_results(sequences_results, latency_seq_res, seq_sota_eval, y_test_atk, test_multi, desired_fpr)
-            last += len(seq_y)
         if verbose: 
             sequences_results.to_csv(os.path.join(results_p,  str(desired_fpr) + 'verb.csv'), index=None)
         return sequences_results

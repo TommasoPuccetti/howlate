@@ -13,7 +13,7 @@ def convert_pcap_to_csv(pcap_file, output_dir):
     try:
         output_file = output_dir / f'{pcap_file.stem}.csv'
         rows = []
-
+        """
         mqtt_ports = [
     1883, 32845, 33121, 33179, 33297, 33801, 33941, 34082, 34115, 34121, 34337, 34367, 34599, 34927, 35009, 35021, 35041,
     35247, 35331, 35399, 35457, 35571, 35617, 35634, 35671, 35673, 35691, 35827, 35839, 35851, 35859, 35908, 35966, 36095,
@@ -34,10 +34,18 @@ def convert_pcap_to_csv(pcap_file, output_dir):
     59281, 59567, 59647, 59805, 59823, 59829, 59883, 59901, 59955, 59973, 60103, 60193, 60313, 60335, 60345, 60641, 60672,
     60707, 60923, 60962
 ]
+        
+        mqtt_ports = [1883, 56837, 52053]
 
         tshark_cmd = ['tshark', '-r', str(pcap_file), '-T', 'json']
         for port in mqtt_ports:
             tshark_cmd += ['-d', f'tcp.port=={port},mqtt']
+"""
+        pg_ports = [5433, 5434, 15432, 25000]  # or a list of custom ports
+
+        tshark_cmd = ['tshark', '-r', str(pcap_file), '-T', 'json']
+        for port in pg_ports:
+            tshark_cmd += ['-d', f'tcp.port=={port},pgsql']
 
         print("📦 Running command:", ' '.join(tshark_cmd))
 

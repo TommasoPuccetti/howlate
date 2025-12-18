@@ -1,0 +1,6 @@
+# Ignore data directories
+/data/
+/apt_dataset_training/
+
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/

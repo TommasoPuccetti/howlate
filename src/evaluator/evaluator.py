@@ -75,28 +75,30 @@ class Evaluator(ABC):
     - Computes FPR as `fp / (fp + tn)` and handles division errors.
     - Delegates result packaging to `store_sota_results()` in the `rh` utility module.
     """
+
     def eval_sota(self, test_y, preds):
-        acc = sklearn.metrics.accuracy_score(test_y, preds)
-        rec = sklearn.metrics.recall_score(test_y, preds)
-        prec = sklearn.metrics.precision_score(test_y, preds)
-        f1 = sklearn.metrics.f1_score(test_y, preds)
+        acc = metrics.accuracy_score(test_y, preds)
+        rec = metrics.recall_score(test_y, preds)
+        prec = metrics.precision_score(test_y, preds)
+        f1 = metrics.f1_score(test_y, preds)
         cm = metrics.confusion_matrix(test_y, preds)
         
-        if cm.shape == (1, 1):  
-            tn, fp, fn, tp = (cm[0, 0], 0, 0, 0) if test_y[0] == 0 else (0, 0, 0, cm[0, 0])
-        elif cm.shape == (2, 2): 
+        tn = fp = fn = tp = 0
+        if cm.shape == (1, 1):
+            if test_y[0] == 0:
+                tn = cm[0, 0]
+            else:
+                tp = cm[0, 0]
+        elif cm.shape == (2, 2):
             tn, fp, fn, tp = cm.ravel()
         else:
             raise ValueError(f"Unexpected confusion matrix shape: {cm.shape}")
-
-        try:
-            fpr = fp / fp + tn
-        except:
-            fpr = None
-        
-        sota_results = rh.store_sota_results(acc, rec, prec, f1, fpr, tn, fp, fn, tp) 
-        
+    
+        fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
+    
+        sota_results = rh.store_sota_results(acc, rec, prec, f1, fpr, tn, fp, fn, tp)
         return sota_results
+
 
     # === bin_preds_for_given_fpr ===
 
@@ -121,13 +123,19 @@ class Evaluator(ABC):
     - The result is a list of binary label arrays aligned with the requested FPR levels.
     """
     def bin_preds_for_given_fpr(self, test_y, preds_proba, desired_fprs, verbose=False):
-        fpr, tpr, thresholds = metrics.roc_curve(test_y, preds_proba[:,1])
-        fpr_indexes = [np.argmax(fpr > val) for val in desired_fprs] 
-        fpr_thresholds = thresholds[fpr_indexes]
-        bin_preds_fpr = [(preds_proba > val).astype(int)[:, 1] for val in fpr_thresholds]
-
-        if verbose:
-            print(bin_preds_fpr)
+        fpr, tpr, thresholds = metrics.roc_curve(test_y, preds_proba[:, 1])
+        fpr_idxs = []
+        thr_list = []
         
+        for target in desired_fprs:
+            idx = np.searchsorted(fpr, target, side="right") - 1
+            idx = int(np.clip(idx, 0, len(thresholds) - 1))
+            fpr_idxs.append(idx)
+            thr_list.append(thresholds[idx])
+        pos = preds_proba[:, 1]
+        bin_preds_fpr = [(pos >= thr).astype(int) for thr in thr_list]
+    
+        if verbose:
+            print({"desired_fprs": desired_fprs, "picked_fpr_idxs": fpr_idxs, "thresholds": thr_list})
         return bin_preds_fpr
         

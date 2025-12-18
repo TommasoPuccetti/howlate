@@ -94,20 +94,23 @@ class SotaEvaluator(Evaluator):
         self.plot_curves(test_y, preds_proba, results_p=results_p)
         
         attacks = np.unique(test_multi)
+        
         atk_index_list = [np.where(test_multi == value)[0].tolist() for value in attacks]
         
         bin_preds_fpr = self.bin_preds_for_given_fpr(test_y, preds_proba, desired_fprs, verbose)
-
         sota_results_fprs = []
         
         for bin_pred, desired_fpr in zip(bin_preds_fpr, desired_fprs):
+            
             sota_results_fpr = []
-
+        
             for indexes, i in zip(atk_index_list, range(0, len(atk_index_list))):
-
                 sota_results = self.eval_sota(test_y[indexes], bin_pred[indexes])
                 sota_results['attack'] = attacks[i]
                 sota_results_fpr.append(sota_results)
+            sota_results = self.eval_sota(test_y, bin_pred)
+            sota_results['attack'] = 'overall' 
+            sota_results_fpr.append(sota_results)
             
             df = pd.DataFrame(sota_results_fpr)
             df.to_csv(os.path.join(results_p, str(desired_fpr) + '_sota.csv'))
@@ -139,7 +142,11 @@ class SotaEvaluator(Evaluator):
             if results_p == None:
                 results_p = self.results_p
             self.plot_precision_recall(test_y, preds_proba, results_p=results_p)
-            self.plot_roc(test_y, preds_proba, results_p=results_p) 
+            self.plot_precision_recall(test_y, preds_proba, size=(9, 3), results_p=results_p)
+            self.plot_roc(test_y, preds_proba, size=(9, 3), results_p=results_p) 
+            self.plot_roc(test_y, preds_proba, results_p=results_p)
+            
+            
 
     # === plot_roc ===
     
@@ -158,17 +165,23 @@ class SotaEvaluator(Evaluator):
     - Plots and saves the ROC curve as a high-resolution PDF.
     - Displays the plot interactively using `plt.show()`.
     """
-    def plot_roc(self, test_y, preds_proba, results_p=None):
+    def plot_roc(self, test_y, preds_proba, size='default', results_p=None):
             if results_p == None:
                 results_p = self.results_p
+
             plt.figure(dpi=400)
+        
+            if size != 'default':
+                plt.figure(figsize=size, dpi=400)
+            
             fpr, tpr, _ = metrics.roc_curve(test_y,  preds_proba[:,1])
             plt.plot(fpr, tpr)
             plt.ylabel('Recall', fontsize=20)
             plt.xlabel('False Positive Rate', fontsize=20)
             plt.xticks(fontsize=16)
             plt.yticks(fontsize=16)
-            plt.savefig(os.path.join(results_p, "roc_curve.pdf"), format='pdf', bbox_inches='tight')
+            plt.savefig(os.path.join(results_p, "roc_curve" + str(size) + ".pdf"), format='pdf', bbox_inches='tight')
+            plt.savefig(os.path.join(results_p, "roc_curve" + str(size) + ".png"), format='png', bbox_inches='tight')
             plt.show()
 
     # === plot_precision_recall ===
@@ -188,16 +201,22 @@ class SotaEvaluator(Evaluator):
     - Plots and saves the precision-recall curve as a high-resolution PDF.
     - Displays the plot interactively with `plt.show()`.
     """
-    def plot_precision_recall(self, test_y, preds_proba, results_p=None):
+    def plot_precision_recall(self, test_y, preds_proba, size='default', results_p=None):
             if results_p == None:
                 results_p = self.results_p
+                
             plt.figure(dpi=400)
-            fpr, tpr, _ = metrics.precision_recall_curve(test_y,  preds_proba[:,1])
-            plt.plot(fpr, tpr)
+
+            if size != 'default':
+                plt.figure(figsize=size, dpi=400)
+                
+            precision, recall, _ = metrics.precision_recall_curve(test_y,  preds_proba[:,1])
+            plt.plot(recall, precision)
             plt.ylabel('Precision', fontsize=20)
             plt.xlabel('Recall', fontsize=20)
             plt.xticks(fontsize=16)
             plt.yticks(fontsize=16)
-            plt.savefig(os.path.join(results_p, "prec_recall_curve.pdf"), format='pdf', bbox_inches='tight')
+            plt.savefig(os.path.join(results_p, "prec_recall_curve" + str(size) + ".pdf"), format='pdf', bbox_inches='tight')
+            plt.savefig(os.path.join(results_p, "prec_recall_curve" + str(size) + ".png"), format='png', bbox_inches='tight')
             plt.show()
         

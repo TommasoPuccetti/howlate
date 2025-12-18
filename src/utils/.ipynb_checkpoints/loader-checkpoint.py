@@ -6,8 +6,8 @@ This module define the PathManager class that handles the input and output path 
 import numpy as np
 import pandas as pd 
 import os
-from config import *
-import results_handler as rh 
+from src.utils.config import *
+import src.utils.results_handler as rh 
 
 class PathManager:
     
@@ -167,7 +167,9 @@ class DataLoader:
     def __init__(self, paths: PathManager):
         self.paths = paths
         self.start_idx =  len(np.load(self.paths.test_y_p, allow_pickle=True))- len(np.load(self.paths.preds_proba_p, allow_pickle=True))
-        
+        print("----------------------------------------------------------------------------------------------")
+        print("Start index for predictions: -------------------------------------------------------------- ", self.start_idx)
+        print("----------------------------------------------------------------------------------------------")
 
     @property
     def test_y(self):
