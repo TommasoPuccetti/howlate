@@ -113,8 +113,4 @@ for model in args.models:
     plot.plot(half='low_half', y_scale='log', name='log_scale_high_fprs')
     plot.plot(half='low_half', mid_val=False, name='half_values_high_fprs')
     plot.plot(half='low_half', y_scale='log', mid_val=False, name='log_scale_half_values_high_fprs')
-    plot.plot(attacks=['pub_exf', 'brute_force_m', 'brute_force_t', 'nmap_mqtt', 'empty_conn_ddos', 'qos_mid_ddos', 'user_prop_ddos', 'target_fpr'], name='attack subset 3')
-    plot.plot(attacks=[ 'nmap_10_T4', 'nmap_sub', 'qos_mid', 'sftp_inst', 'nmap_10_T5', 'scp_inst', 'slash_char', 'target_fpr'], name='attack subset 2')
-plot.plot(attacks=['dollar_char', 'empty_conn', 'mqtt_cat', 'sftp_exf', 'nmap_banner', 'scp_exf', 'target_fpr'], name='attack subset 1')
-
 print("Evaluation complete.")
