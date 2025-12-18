@@ -1,4 +1,4 @@
-# 🛠 HOWLATE Framework
+# HOWLATE Framework
 
 HOWLATE is a framework designed to evaluate the timeliness of intrusion detection systems alongside traditional performance metrics. Specifically, it measures attack latency, defined as the time from the start of an attack to the time it is detected. More details can be found in the related conference paper [R] 
 
