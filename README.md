@@ -25,7 +25,7 @@ To replicate the results of the paper you can use the ./data folder from https:/
 
 Use `editcap` from Tshark to split large PCAPs. Each split file from an **attack PCAP** will generate **two sequences** in the final dataset.
 
-> 📌 The number of attack PCAPs determines the number of attack sequences.  
+> The number of attack PCAPs determines the number of attack sequences.  
 > Example: 3 split files = 6 attack sequences.
 
 ---
@@ -34,7 +34,7 @@ Use `editcap` from Tshark to split large PCAPs. Each split file from an **attack
 
 Use `convert.py` to transform PCAPs into CSV files.
 
-#### ✅ Usage
+#### Usage
 
 ```bash
 # a) Convert all PCAPs in a specific folder
@@ -76,7 +76,7 @@ Organize the converted CSVs into the following folder structure:
 
 Run `build_dataset.py` to merge and label data into a time-series classification dataset.
 
-#### ✅ Usage
+#### Usage
 
 ```bash
 python build_dataset.py <dataset_name>
@@ -85,7 +85,7 @@ python build_dataset.py <dataset_name>
 python build_dataset.py cic_iot_23
 ```
 
-#### 📦 Output: `./data/<dataset_name>/dataset/train_test/`
+#### Output: `./data/<dataset_name>/dataset/train_test/`
 
 - `train_set.csv` — Time-series training set
 - `test_set.csv` — Time-series test set
@@ -109,7 +109,7 @@ Model training is **not included** in the framework, but a sample notebook is pr
 
 Use `evaluate.py` to evaluate the performance of your trained model.
 
-#### ✅ Usage
+#### Usage
 
 ```bash
 python evaluate.py <dataset_name> <model_name>
@@ -118,14 +118,14 @@ python evaluate.py <dataset_name> <model_name>
 python evaluate.py cic_iot_23 xgb
 ```
 
-#### 📂 Required Files (in `dataset/train_test/` folder):
+#### Required Files (in `dataset/train_test/` folder):
 
 - `test_y.npy` — Binary ground-truth labels (0 = normal, 1 = attack)
 - `test_multi_label.npy` — Multi-class attack labels (e.g., `icmp_dos`, `scan`)
 - `test_timestamp.npy` — Capture timestamps for each packet
 - `test_sequences.pkl` — List of packet indices for each attack sequence
 
-#### 📂 Required Files (in `models/model_name/preds/` folder):
+#### Required Files (in `models/model_name/preds/` folder):
 - `preds.npy` — Final binary predictions from the model
 - `preds_proba.npy` — Prediction probabilities from the model
 ---
@@ -134,7 +134,7 @@ python evaluate.py cic_iot_23 xgb
 
 
 
-## 📚 References
+## References
 
 - [CIC-IoT-2023 Dataset - Canadian Institute for Cybersecurity](https://www.unb.ca/cic/datasets/iot2023.html)
 - [Wireshark editcap tool](https://www.wireshark.org/docs/man-pages/editcap.html)
